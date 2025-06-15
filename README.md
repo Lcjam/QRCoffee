@@ -72,9 +72,25 @@ QRCoffee/
 - MySQL 8.0+
 - Gradle 8.0+
 
+### 환경변수 설정
+보안을 위해 데이터베이스 접속 정보를 환경변수로 관리합니다.
+
+`backend/.env` 파일을 생성하고 다음 값들을 설정하세요:
+```bash
+# Database Configuration
+DB_USERNAME=your_mysql_username
+DB_PASSWORD=your_mysql_password
+DEV_DB_USERNAME=your_dev_mysql_username
+DEV_DB_PASSWORD=your_dev_mysql_password
+
+# JWT Configuration (선택사항)
+JWT_SECRET=your_jwt_secret_key_at_least_256_bits_long
+```
+
 ### 백엔드 실행
 ```bash
 cd backend
+# 환경변수 설정 후
 ./gradlew bootRun
 ```
 
