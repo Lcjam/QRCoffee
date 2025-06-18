@@ -39,6 +39,9 @@ dependencies {
     implementation 'com.google.zxing:core:3.5.2'
     implementation 'com.google.zxing:javase:3.5.2'
     
+    // Environment Variables
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+    
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
