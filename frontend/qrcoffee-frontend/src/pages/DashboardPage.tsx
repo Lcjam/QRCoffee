@@ -103,8 +103,17 @@ const DashboardPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary" paragraph>
                 - 서브계정 관리 기능
               </Typography>
+              <Typography variant="body2" color="success.main" paragraph>
+                ✅ 4단계: 메뉴 관리 시스템 완료
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                - 카테고리 관리 기능
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                - 메뉴 CRUD 기능
+              </Typography>
               <Typography variant="body2" color="warning.main">
-                🚧 다음 단계: 메뉴 관리 시스템
+                🚧 다음 단계: 주문 관리 시스템
               </Typography>
             </CardContent>
           </Card>
@@ -133,7 +142,10 @@ const DashboardPage: React.FC = () => {
               서브계정 관리
             </Button>
           )}
-          <Button variant="outlined" disabled>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/menu-management')}
+          >
             메뉴 관리
           </Button>
           <Button variant="outlined" disabled>
