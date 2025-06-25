@@ -11,6 +11,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import StoreManagePage from './pages/StoreManagePage';
 import SubAccountManagePage from './pages/SubAccountManagePage';
 import MenuManagePage from './pages/MenuManagePage';
+import SeatManagePage from './pages/SeatManagePage';
 
 // Material-UI 테마 설정
 const theme = createTheme({
@@ -72,6 +73,16 @@ function App() {
               element={
                 <PrivateRoute>
                   <MenuManagePage />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* 좌석 관리 페이지 */}
+            <Route 
+              path="/seat-management" 
+              element={
+                <PrivateRoute>
+                  <SeatManagePage />
                 </PrivateRoute>
               } 
             />

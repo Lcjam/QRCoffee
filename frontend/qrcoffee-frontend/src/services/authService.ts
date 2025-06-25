@@ -176,6 +176,13 @@ export const authService = {
   }
 };
 
+/**
+ * 현재 저장된 액세스 토큰 반환
+ */
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem('accessToken');
+};
+
 // 토큰 갱신 함수를 별도로 export (인터셉터에서 사용)
 async function refreshToken(): Promise<void> {
   return authService.refreshToken();
