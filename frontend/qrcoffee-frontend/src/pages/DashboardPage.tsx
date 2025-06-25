@@ -112,6 +112,15 @@ const DashboardPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary" paragraph>
                 - 메뉴 CRUD 기능
               </Typography>
+              <Typography variant="body2" color="success.main" paragraph>
+                ✅ 5단계: 좌석 관리 시스템 완료
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                - 좌석 CRUD 기능
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                - QR코드 생성/관리
+              </Typography>
               <Typography variant="body2" color="warning.main">
                 🚧 다음 단계: 주문 관리 시스템
               </Typography>
@@ -148,11 +157,14 @@ const DashboardPage: React.FC = () => {
           >
             메뉴 관리
           </Button>
-          <Button variant="outlined" disabled>
-            주문 관리
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/seat-management')}
+          >
+            좌석 관리
           </Button>
           <Button variant="outlined" disabled>
-            QR코드 관리
+            주문 관리
           </Button>
         </Box>
       </Paper>
