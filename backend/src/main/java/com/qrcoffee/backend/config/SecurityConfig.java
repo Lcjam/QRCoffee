@@ -50,7 +50,9 @@ public class SecurityConfig {
                     "/api/auth/signup", 
                     "/api/health",
                     "/actuator/**",
-                    "/api/qr/**"  // QR코드 스캔용
+                    "/api/qr/**",  // QR코드 스캔용
+                    "/api/public/seats/**",  // 퍼블릭 좌석 API
+                    "/api/public/menus/**"   // 고객용 메뉴 조회 (향후 6단계에서 사용)
                 ).permitAll()
                 
                 // 관리자 전용 엔드포인트

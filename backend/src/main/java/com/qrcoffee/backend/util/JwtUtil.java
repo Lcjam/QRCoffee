@@ -118,6 +118,50 @@ public class JwtUtil {
     }
     
     /**
+     * 요청에서 매장 ID 추출
+     */
+    public Long getStoreIdFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        if (token != null) {
+            return getStoreIdFromToken(token);
+        }
+        return null;
+    }
+    
+    /**
+     * 요청에서 사용자 ID 추출
+     */
+    public Long getUserIdFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        if (token != null) {
+            return getUserIdFromToken(token);
+        }
+        return null;
+    }
+    
+    /**
+     * 요청에서 역할 추출
+     */
+    public String getRoleFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String token = extractTokenFromRequest(request);
+        if (token != null) {
+            return getRoleFromToken(token);
+        }
+        return null;
+    }
+    
+    /**
+     * HttpServletRequest에서 JWT 토큰 추출
+     */
+    private String extractTokenFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+    
+    /**
      * 토큰에서 Claims 추출
      */
     private Claims getClaims(String token) {
