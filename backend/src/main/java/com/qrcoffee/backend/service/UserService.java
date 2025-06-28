@@ -7,6 +7,7 @@ import com.qrcoffee.backend.exception.BusinessException;
 import com.qrcoffee.backend.repository.StoreRepository;
 import com.qrcoffee.backend.repository.UserRepository;
 import com.qrcoffee.backend.util.JwtUtil;
+import com.qrcoffee.backend.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class UserService {
     
+    // 상수 정의
+    private static final String LOGIN_SUCCESS_MESSAGE = "로그인 성공";
+    private static final String SIGNUP_SUCCESS_MESSAGE = "회원가입 완료";
+    private static final String STAFF_ACCOUNT_SUCCESS_MESSAGE = "직원 계정 생성 완료";
+    private static final String USER_STATUS_CHANGE_MESSAGE = "사용자 상태 변경";
+    
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
     private final PasswordEncoder passwordEncoder;
@@ -37,44 +44,35 @@ public class UserService {
         log.info("회원가입 시도: {}", request.getEmail());
         
         // 이메일 중복 검증
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("이미 사용중인 이메일입니다.", HttpStatus.BAD_REQUEST);
-        }
+        ValidationUtils.validateEmailNotDuplicate(
+                request.getEmail(), 
+                userRepository.existsByEmail(request.getEmail())
+        );
         
-        // 매장 존재 여부 확인
-        Store store = storeRepository.findByIdAndIsActive(request.getStoreId(), true)
-                .orElseThrow(() -> new BusinessException("존재하지 않는 매장입니다.", HttpStatus.BAD_REQUEST));
-        
-        // 서브계정 생성 시 부모 계정 검증
-        if (request.getParentUserId() != null) {
-            User parentUser = userRepository.findById(request.getParentUserId())
-                    .orElseThrow(() -> new BusinessException("존재하지 않는 부모 계정입니다.", HttpStatus.BAD_REQUEST));
-            
-            if (!parentUser.getRole().equals(User.Role.MASTER)) {
-                throw new BusinessException("마스터 계정만 서브계정을 생성할 수 있습니다.", HttpStatus.BAD_REQUEST);
-            }
-            
-            if (!parentUser.getStoreId().equals(request.getStoreId())) {
-                throw new BusinessException("부모 계정과 같은 매장이어야 합니다.", HttpStatus.BAD_REQUEST);
-            }
-        }
+        // 매장 검증
+        Store store = validateAndGetStore(request.getStoreId());
         
         // 사용자 생성
-        User user = User.builder()
+        User user = createMasterUser(request, store);
+        User savedUser = userRepository.save(user);
+        
+        log.info("{}: {} (ID: {})", SIGNUP_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
+        
+        return UserResponse.from(savedUser);
+    }
+    
+    /**
+     * 마스터 사용자 생성
+     */
+    private User createMasterUser(SignupRequest request, Store store) {
+        return User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phone(request.getPhone())
-                .role(request.getParentUserId() != null ? User.Role.SUB : User.Role.MASTER)
-                .storeId(request.getStoreId())
-                .parentUserId(request.getParentUserId())
-                .isActive(true)
+                .role(User.Role.MASTER)
+                .store(store)
                 .build();
-        
-        User savedUser = userRepository.save(user);
-        log.info("회원가입 완료: {} (ID: {})", savedUser.getEmail(), savedUser.getId());
-        
-        return UserResponse.from(savedUser);
     }
     
     /**
@@ -84,38 +82,55 @@ public class UserService {
     public JwtResponse login(LoginRequest request) {
         log.info("로그인 시도: {}", request.getEmail());
         
-        // 사용자 조회
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("잘못된 이메일 또는 비밀번호입니다.", HttpStatus.UNAUTHORIZED));
-        
-        // 계정 활성화 상태 확인
-        if (!user.getIsActive()) {
-            throw new BusinessException("비활성화된 계정입니다.", HttpStatus.UNAUTHORIZED);
-        }
+        // 사용자 조회 및 검증
+        User user = findAndValidateUser(request);
         
         // 비밀번호 검증
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BusinessException("잘못된 이메일 또는 비밀번호입니다.", HttpStatus.UNAUTHORIZED);
-        }
-        
-        // 매장 활성화 상태 확인
-        Store store = storeRepository.findByIdAndIsActive(user.getStoreId(), true)
-                .orElseThrow(() -> new BusinessException("비활성화된 매장입니다.", HttpStatus.UNAUTHORIZED));
-        
-        // 마지막 로그인 시간 업데이트
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
+        validatePassword(request.getPassword(), user);
         
         // JWT 토큰 생성
+        JwtResponse jwtResponse = generateJwtResponse(user);
+        
+        log.info("{}: {} (ID: {})", LOGIN_SUCCESS_MESSAGE, user.getEmail(), user.getId());
+        
+        return jwtResponse;
+    }
+    
+    /**
+     * 사용자 조회 및 로그인 검증
+     */
+    private User findAndValidateUser(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        ValidationUtils.validateUserExists(user, request.getEmail());
+        
+        // 계정 및 매장 활성화 상태 확인
+        ValidationUtils.validateUserActive(user);
+        ValidationUtils.validateStoreActive(user.getStore());
+        
+        return user;
+    }
+    
+    /**
+     * 비밀번호 검증
+     */
+    private void validatePassword(String rawPassword, User user) {
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            log.warn("비밀번호 불일치: {}", user.getEmail());
+            throw new BusinessException("잘못된 이메일 또는 비밀번호입니다.", HttpStatus.UNAUTHORIZED);
+        }
+    }
+    
+    /**
+     * JWT 응답 생성
+     */
+    private JwtResponse generateJwtResponse(User user) {
         String accessToken = jwtUtil.generateAccessToken(
                 user.getEmail(), 
                 user.getId(), 
                 user.getRole().name(), 
-                user.getStoreId()
+                user.getStore() != null ? user.getStore().getId() : null
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-        
-        log.info("로그인 성공: {} (ID: {})", user.getEmail(), user.getId());
         
         return new JwtResponse(
                 accessToken,
@@ -124,7 +139,7 @@ public class UserService {
                 user.getEmail(),
                 user.getName(),
                 user.getRole().name(),
-                user.getStoreId()
+                user.getStore() != null ? user.getStore().getId() : null
         );
     }
     
@@ -132,9 +147,7 @@ public class UserService {
      * 현재 사용자 정보 조회
      */
     public UserResponse getCurrentUser(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        
+        User user = findUserByEmail(email);
         return UserResponse.from(user);
     }
     
@@ -142,9 +155,7 @@ public class UserService {
      * 사용자 ID로 조회
      */
     public UserResponse getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        
+        User user = findUserById(userId);
         return UserResponse.from(user);
     }
     
@@ -152,18 +163,8 @@ public class UserService {
      * 매장별 사용자 목록 조회
      */
     public List<UserResponse> getUsersByStore(Long storeId) {
-        List<User> users = userRepository.findByStoreIdAndIsActive(storeId, true);
+        List<User> users = userRepository.findByStore_IdAndIsActive(storeId, true);
         return users.stream()
-                .map(UserResponse::from)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * 서브계정 목록 조회
-     */
-    public List<UserResponse> getSubAccounts(Long parentUserId) {
-        List<User> subUsers = userRepository.findByParentUserIdAndIsActive(parentUserId, true);
-        return subUsers.stream()
                 .map(UserResponse::from)
                 .collect(Collectors.toList());
     }
@@ -173,51 +174,84 @@ public class UserService {
      */
     @Transactional
     public UserResponse toggleUserStatus(Long userId, Long requesterId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        // 사용자 조회
+        User user = findUserById(userId);
+        User requester = findUserById(requesterId);
         
-        User requester = userRepository.findById(requesterId)
-                .orElseThrow(() -> new BusinessException("요청자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        // 권한 검증
+        ValidationUtils.validateUserManagementPermission(requester, user, userId);
         
-        // 권한 검증 (마스터 계정만 가능)
-        if (!requester.getRole().equals(User.Role.MASTER)) {
-            throw new BusinessException("마스터 계정만 사용자 상태를 변경할 수 있습니다.", HttpStatus.FORBIDDEN);
-        }
-        
-        // 같은 매장인지 확인
-        if (!requester.getStoreId().equals(user.getStoreId())) {
-            throw new BusinessException("같은 매장의 사용자만 관리할 수 있습니다.", HttpStatus.FORBIDDEN);
-        }
-        
-        // 자기 자신은 비활성화할 수 없음
-        if (userId.equals(requesterId)) {
-            throw new BusinessException("자기 자신의 계정은 비활성화할 수 없습니다.", HttpStatus.BAD_REQUEST);
-        }
-        
+        // 상태 변경
         user.setIsActive(!user.getIsActive());
         User updatedUser = userRepository.save(user);
         
-        log.info("사용자 상태 변경: {} -> {}", user.getEmail(), user.getIsActive() ? "활성화" : "비활성화");
+        log.info("{}: {} -> {}", USER_STATUS_CHANGE_MESSAGE, user.getEmail(), user.getIsActive() ? "활성화" : "비활성화");
         
         return UserResponse.from(updatedUser);
     }
     
     /**
-     * 서브계정 생성
+     * 직원 계정 생성
      */
     @Transactional
-    public UserResponse createSubAccount(SignupRequest request, Long masterUserId) {
-        User masterUser = userRepository.findById(masterUserId)
-                .orElseThrow(() -> new BusinessException("마스터 계정을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+    public UserResponse createStaffAccount(SignupRequest request, Long masterUserId) {
+        log.info("직원 계정 생성 시도: {} by masterUserId={}", request.getEmail(), masterUserId);
         
-        if (!masterUser.getRole().equals(User.Role.MASTER)) {
-            throw new BusinessException("마스터 계정만 서브계정을 생성할 수 있습니다.", HttpStatus.FORBIDDEN);
-        }
+        // 마스터 사용자 조회 및 권한 검증
+        User masterUser = findUserById(masterUserId);
+        ValidationUtils.validateMasterRole(masterUser);
         
-        // 요청에 부모 사용자 ID 설정
-        request.setParentUserId(masterUserId);
-        request.setStoreId(masterUser.getStoreId());
+        // 이메일 중복 검증
+        ValidationUtils.validateEmailNotDuplicate(
+                request.getEmail(), 
+                userRepository.existsByEmail(request.getEmail())
+        );
         
-        return signup(request);
+        // 직원 계정 생성
+        User staffUser = createStaffUser(request, masterUser.getStore());
+        User savedUser = userRepository.save(staffUser);
+        
+        log.info("{}: {} (ID: {})", STAFF_ACCOUNT_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
+        
+        return UserResponse.from(savedUser);
+    }
+    
+    /**
+     * 직원 사용자 생성
+     */
+    private User createStaffUser(SignupRequest request, Store store) {
+        return User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .name(request.getName())
+                .phone(request.getPhone())
+                .role(User.Role.STAFF)
+                .store(store)
+                .build();
+    }
+    
+    /**
+     * 매장 검증 및 조회
+     */
+    private Store validateAndGetStore(Long storeId) {
+        Store store = storeRepository.findByIdAndIsActive(storeId, true).orElse(null);
+        ValidationUtils.validateStoreExistsAndActive(store, storeId);
+        return store;
+    }
+    
+    /**
+     * 이메일로 사용자 조회 (공통 메서드)
+     */
+    private User findUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+    }
+    
+    /**
+     * ID로 사용자 조회 (공통 메서드)
+     */
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 } 

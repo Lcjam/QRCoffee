@@ -50,3 +50,6 @@ logs/
 # Temporary files
 *.tmp
 *.temp 
+# 리팩토링 보고서 파일들 제외 (README.md 제외)
+*.md
+!README.md
