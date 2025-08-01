@@ -24,8 +24,10 @@ public class SeatRequest {
     
     @Min(value = 1, message = "최대 수용 인원은 1명 이상이어야 합니다")
     @Max(value = 20, message = "최대 수용 인원은 20명 이하여야 합니다")
+    @Builder.Default
     private Integer maxCapacity = 4;
     
+    @Builder.Default
     private Boolean isActive = true;
     
     @Size(max = 500, message = "QR코드 이미지 URL은 500자 이하여야 합니다")

@@ -61,14 +61,26 @@ jwt:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${CORS_ALLOWED_origins:http://localhost:3000}
-  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-  allowed-headers: "*"
-  allow-credentials: true
+  allowed-origins: http://localhost:3000,http://127.0.0.1:3000
+  allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+  allowed-headers: Content-Type,Authorization,X-Requested-With,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers
+  allow-credentials: false
 
 # File Storage Configuration
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+
+# App Configuration
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+
+# TossPayments Configuration
+toss:
+  payments:
+    client-key: ${TOSS_PAYMENTS_CLIENT_KEY:test_ck_DnyRpQWGrNGxSzNy0nOz8wGvYOiR}
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R:}
+    base-url: ${TOSS_PAYMENTS_BASE_URL:https://api.tosspayments.com}
 
 # Actuator Configuration
 management:

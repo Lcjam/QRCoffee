@@ -20,7 +20,7 @@ public class SeatResponse {
     private String description;
     private String qrCode;
     private Boolean isActive;
-    private Boolean isOccupied;
+
     private Integer maxCapacity;
     private String qrCodeImageUrl;
     private LocalDateTime createdAt;
@@ -40,7 +40,6 @@ public class SeatResponse {
                 .description(seat.getDescription())
                 .qrCode(seat.getQrCode())
                 .isActive(seat.getIsActive())
-                .isOccupied(seat.getIsOccupied())
                 .maxCapacity(seat.getMaxCapacity())
                 .qrCodeImageUrl(seat.getQrCodeImageUrl())
                 .createdAt(seat.getCreatedAt())
@@ -55,10 +54,8 @@ public class SeatResponse {
     private static String getStatusString(Seat seat) {
         if (!seat.getIsActive()) {
             return "비활성";
-        } else if (seat.getIsOccupied()) {
-            return "사용중";
         } else {
-            return "사용가능";
+            return "활성";
         }
     }
 } 

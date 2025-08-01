@@ -41,38 +41,23 @@ public class UserController {
     }
     
     /**
-     * 서브계정 목록 조회 (마스터 계정만)
+     * 직원 계정 생성 (마스터 계정만)
      */
-    @GetMapping("/sub-accounts")
+    @PostMapping("/staff")
     @PreAuthorize("hasRole('MASTER')")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getSubAccounts(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromRequest(request);
-        
-        log.info("서브계정 목록 조회: masterUserId={}", userId);
-        
-        List<UserResponse> subAccounts = userService.getSubAccounts(userId);
-        
-        return ResponseEntity.ok(ApiResponse.success("서브계정 목록을 조회했습니다.", subAccounts));
-    }
-    
-    /**
-     * 서브계정 생성 (마스터 계정만)
-     */
-    @PostMapping("/sub-accounts")
-    @PreAuthorize("hasRole('MASTER')")
-    public ResponseEntity<ApiResponse<UserResponse>> createSubAccount(
+    public ResponseEntity<ApiResponse<UserResponse>> createStaffAccount(
             @Valid @RequestBody SubAccountRequest request,
             HttpServletRequest httpRequest) {
         Long masterUserId = jwtUtil.getUserIdFromRequest(httpRequest);
         Long storeId = jwtUtil.getStoreIdFromRequest(httpRequest);
         
-        log.info("서브계정 생성 요청: masterUserId={}, storeId={}, email={}", masterUserId, storeId, request.getEmail());
+        log.info("직원 계정 생성 요청: masterUserId={}, storeId={}, email={}", masterUserId, storeId, request.getEmail());
         
         // SubAccountRequest를 SignupRequest로 변환
-        SignupRequest signupRequest = request.toSignupRequest(storeId, masterUserId);
-        UserResponse subAccount = userService.createSubAccount(signupRequest, masterUserId);
+        SignupRequest signupRequest = request.toSignupRequest(storeId);
+        UserResponse staffAccount = userService.createStaffAccount(signupRequest, masterUserId);
         
-        return ResponseEntity.ok(ApiResponse.success("서브계정이 생성되었습니다.", subAccount));
+        return ResponseEntity.ok(ApiResponse.success("직원 계정이 생성되었습니다.", staffAccount));
     }
     
     /**
@@ -96,7 +81,7 @@ public class UserController {
      * 사용자 상세 정보 조회
      */
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('MASTER') or hasRole('SUB')")
+    @PreAuthorize("hasRole('MASTER') or hasRole('STAFF')")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long userId) {
         log.info("사용자 상세 조회: userId={}", userId);
         

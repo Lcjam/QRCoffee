@@ -88,7 +88,7 @@ public class PublicSeatController {
         
         try {
             SeatResponse seat = seatService.getActiveSeatByQRCode(qrCode);
-            String status = seat.getIsOccupied() ? "사용중" : "사용가능";
+            String status = seat.getIsActive() ? "활성" : "비활성";
             return ResponseEntity.ok(ApiResponse.success("좌석 상태를 조회했습니다.", status));
         } catch (Exception e) {
             return ResponseEntity.badRequest()

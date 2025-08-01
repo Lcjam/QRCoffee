@@ -34,17 +34,16 @@ public class Seat {
     @Column(name = "qr_code", nullable = false, unique = true, length = 36)
     private String qrCode; // QR코드 UUID
     
-    @Column(name = "is_active", nullable = false)
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isActive = true; // 좌석 사용 가능 여부
     
-    @Column(name = "is_occupied", nullable = false)
-    private Boolean isOccupied = false; // 현재 사용 중 여부
-    
-    @Column(name = "max_capacity", nullable = false)
+    @Column(nullable = false)
+    @Builder.Default
     private Integer maxCapacity = 4; // 최대 수용 인원
     
-    @Column(name = "qr_code_image_url", length = 500)
-    private String qrCodeImageUrl; // QR코드 이미지 URL (선택사항)
+    @Column(name = "qr_code_image_url", columnDefinition = "TEXT")
+    private String qrCodeImageUrl; // QR코드 이미지 Base64 (선택사항)
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -72,16 +71,7 @@ public class Seat {
     
     // 편의 메서드들
     public boolean isAvailable() {
-        return isActive && !isOccupied;
-    }
-    
-    public void occupy() {
-        this.isOccupied = true;
-        this.lastUsedAt = LocalDateTime.now();
-    }
-    
-    public void release() {
-        this.isOccupied = false;
+        return isActive;
     }
     
     public void activate() {
@@ -90,6 +80,5 @@ public class Seat {
     
     public void deactivate() {
         this.isActive = false;
-        this.isOccupied = false; // 비활성화 시 점유 상태도 해제
     }
 } 

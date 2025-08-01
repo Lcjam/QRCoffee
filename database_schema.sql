@@ -64,13 +64,13 @@ CREATE TABLE users (
 CREATE TABLE seats (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     store_id BIGINT NOT NULL COMMENT '매장 ID',
-    seat_number VARCHAR(100) NOT NULL COMMENT '좌석 번호 (예: A1, 테이블1, 창가1)',
-    description VARCHAR(255) COMMENT '좌석 설명 (예: 창가 좌석, 2인용 테이블)',
+    seat_number VARCHAR(100) NOT NULL COMMENT '좌석 번호',
+    description VARCHAR(255) COMMENT '좌석 설명',
     qr_code VARCHAR(36) UNIQUE NOT NULL COMMENT 'QR코드 UUID',
     is_active BOOLEAN DEFAULT TRUE COMMENT '좌석 사용 가능 여부',
     is_occupied BOOLEAN DEFAULT FALSE COMMENT '현재 사용 중 여부',
     max_capacity INT DEFAULT 4 COMMENT '최대 수용 인원',
-    qr_code_image_url VARCHAR(500) COMMENT 'QR코드 이미지 URL (선택사항)',
+    qr_code_image_url TEXT COMMENT 'QR코드 이미지 Base64',
     qr_generated_at TIMESTAMP COMMENT 'QR코드 생성 시점',
     last_used_at TIMESTAMP COMMENT '마지막 사용 시점',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -182,30 +182,116 @@ CREATE TABLE order_items (
 -- 6. 결제 관리 테이블
 -- ================================================================================
 
--- 결제 테이블
+-- 결제 테이블 (토스페이먼츠 v1 규격)
 CREATE TABLE payments (
+    -- 기본 식별자
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    order_id BIGINT NOT NULL COMMENT '주문 ID',
-    payment_key VARCHAR(200) UNIQUE NOT NULL COMMENT '토스페이먼츠 결제키',
-    order_id_toss VARCHAR(200) NOT NULL COMMENT '토스페이먼츠 주문ID',
-    amount DECIMAL(10,0) NOT NULL COMMENT '결제 금액',
-    status ENUM('READY', 'IN_PROGRESS', 'WAITING_FOR_DEPOSIT', 'DONE', 'CANCELED', 'PARTIAL_CANCELED', 'ABORTED', 'EXPIRED') 
-           DEFAULT 'READY' COMMENT '결제 상태 (토스페이먼츠 기준)',
-    method VARCHAR(50) COMMENT '결제 수단 (카드, 간편결제 등)',
+    order_id BIGINT NULL COMMENT '주문 ID (장바구니 직결제시 null 가능)',
+    
+    -- 토스페이먼츠 v1 핵심 필드들
+    payment_key VARCHAR(200) COMMENT '토스페이먼츠 결제키 (paymentKey)',
+    order_id_toss VARCHAR(64) NOT NULL COMMENT '토스페이먼츠 주문ID (orderId)',
+    
+    -- 결제 기본 정보  
+    type ENUM('NORMAL', 'BILLING', 'BRANDPAY') DEFAULT 'NORMAL' COMMENT '결제 타입',
+    order_name VARCHAR(100) COMMENT '주문명',
+    currency VARCHAR(3) DEFAULT 'KRW' COMMENT '통화',
+    country VARCHAR(2) DEFAULT 'KR' COMMENT '국가코드',
+    version VARCHAR(20) DEFAULT '2022-11-16' COMMENT 'API 버전',
+    
+    -- 결제 상태 (토스페이먼츠 v1 공식 상태값)
+    status ENUM(
+        'READY',                -- 결제 요청
+        'IN_PROGRESS',          -- 결제 진행 중
+        'WAITING_FOR_DEPOSIT',  -- 입금 대기 (가상계좌)
+        'DONE',                 -- 결제 완료
+        'CANCELED',             -- 결제 취소
+        'PARTIAL_CANCELED',     -- 부분 취소
+        'ABORTED',              -- 결제 중단
+        'EXPIRED'               -- 결제 만료
+    ) DEFAULT 'READY' COMMENT '토스페이먼츠 결제 상태',
+    
+    -- 결제 수단 (토스페이먼츠 v1 실제 반환값 저장용)
+    method VARCHAR(50) COMMENT '토스페이먼츠 결제 수단 (실제 반환값)',
+    
+    -- 금액 정보
+    total_amount DECIMAL(10,0) NOT NULL COMMENT '총 결제 금액',
+    balance_amount DECIMAL(10,0) NOT NULL COMMENT '취소 가능 금액',
+    supplied_amount DECIMAL(10,0) NOT NULL COMMENT '공급가액',
+    vat DECIMAL(10,0) NOT NULL COMMENT '부가세',
+    tax_free_amount DECIMAL(10,0) DEFAULT 0 COMMENT '면세 금액',
+    tax_exemption_amount DECIMAL(10,0) DEFAULT 0 COMMENT '비과세 금액',
+    
+    -- 거래 식별자
+    last_transaction_key VARCHAR(64) COMMENT '마지막 거래키 (lastTransactionKey)',
+    transaction_key VARCHAR(64) COMMENT '거래키 (transactionKey)',
+    mid VARCHAR(14) COMMENT '가맹점 ID',
+    
+    -- 결제 수단별 상세 정보 (JSON)
+    card JSON COMMENT '카드 결제 상세 정보',
+    virtual_account JSON COMMENT '가상계좌 정보',
+    easy_pay JSON COMMENT '간편결제 정보',
+    mobile_phone JSON COMMENT '휴대폰 결제 정보',
+    transfer JSON COMMENT '계좌이체 정보',
+    gift_certificate JSON COMMENT '상품권 결제 정보',
+    
+    -- 현금영수증 정보
+    cash_receipt JSON COMMENT '현금영수증 정보',
+    cash_receipts JSON COMMENT '현금영수증 목록',
+    
+    -- 할인 및 취소 정보
+    discount JSON COMMENT '할인 정보',
+    cancels JSON COMMENT '취소 내역',
+    
+    -- 메타데이터 및 기타 정보
+    metadata JSON COMMENT '커스텀 메타데이터 (장바구니 정보 임시 저장용)',
+    receipt JSON COMMENT '영수증 정보',
+    checkout JSON COMMENT '체크아웃 정보',
+    failure JSON COMMENT '결제 실패 상세 정보',
+    
+    -- 고급 기능 플래그
+    use_escrow BOOLEAN DEFAULT FALSE COMMENT '에스크로 사용 여부',
+    culture_expense BOOLEAN DEFAULT FALSE COMMENT '문화비 지출 여부',
+    is_partial_cancelable BOOLEAN DEFAULT TRUE COMMENT '부분취소 가능 여부',
+    
+    -- 웹훅 검증용
+    secret VARCHAR(50) COMMENT '웹훅 검증용 시크릿값',
+    
+    -- 타임스탬프
+    requested_at TIMESTAMP NULL COMMENT '결제 요청 시간',
     approved_at TIMESTAMP NULL COMMENT '결제 승인 시간',
-    failed_reason TEXT COMMENT '결제 실패 사유',
-    cancel_reason TEXT COMMENT '결제 취소 사유',
-    receipt_url VARCHAR(500) COMMENT '영수증 URL',
+    
+    -- 기본 타임스탬프
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    -- 외래키 제약조건 (nullable)
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
     
+    -- UNIQUE 제약조건
+    UNIQUE KEY uk_payments_payment_key (payment_key),
+    UNIQUE KEY uk_payments_order_id_toss (order_id_toss),
+    
+    -- 기본 조회 인덱스
     INDEX idx_payments_order (order_id),
-    INDEX idx_payments_key (payment_key),
+    INDEX idx_payments_last_transaction_key (last_transaction_key),
+    INDEX idx_payments_transaction_key (transaction_key),
     INDEX idx_payments_status (status),
-    INDEX idx_payments_approved (approved_at)
-) ENGINE=InnoDB COMMENT='결제 관리';
+    INDEX idx_payments_method (method),
+    INDEX idx_payments_approved (approved_at),
+    
+    -- 고급 검색 인덱스
+    INDEX idx_payments_type (type),
+    INDEX idx_payments_currency (currency),
+    INDEX idx_payments_balance_amount (balance_amount),
+    INDEX idx_payments_mid (mid),
+    
+    -- 복합 인덱스 (성능 최적화)
+    INDEX idx_payments_order_status_approved (order_id, status, approved_at),
+    INDEX idx_payments_status_method_created (status, method, created_at),
+    INDEX idx_payments_toss_order_status (order_id_toss, status)
+    
+) ENGINE=InnoDB COMMENT='결제 관리 (토스페이먼츠 v1 규격)';
 
 -- ================================================================================
 -- 7. 알림 관리 테이블

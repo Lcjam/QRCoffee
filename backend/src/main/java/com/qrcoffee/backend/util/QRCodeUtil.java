@@ -1,8 +1,19 @@
 package com.qrcoffee.backend.util;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.UUID;
 import java.security.SecureRandom;
 
@@ -12,6 +23,9 @@ public class QRCodeUtil {
     
     private static final SecureRandom random = new SecureRandom();
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
     
     /**
      * 고유한 QR코드 UUID 생성
@@ -103,5 +117,60 @@ public class QRCodeUtil {
      */
     public void logQRCodeScan(String qrCode, String userAgent, String ipAddress) {
         log.info("QR코드 스캔 - QR코드: {}, UserAgent: {}, IP: {}", qrCode, userAgent, ipAddress);
+    }
+    
+    /**
+     * QR코드 이미지 생성 (Base64 인코딩)
+     */
+    public String generateQRCodeImage(String qrCode) {
+        try {
+            // QR코드 URL 생성
+            String qrUrl = generateQRCodeUrl(qrCode, frontendUrl);
+            
+            // QR코드 생성
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrUrl, BarcodeFormat.QR_CODE, 300, 300);
+            
+            // 이미지 생성
+            BufferedImage image = createQRCodeImage(bitMatrix);
+            
+            // Base64 인코딩
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ImageIO.write(image, "PNG", outputStream);
+            byte[] imageBytes = outputStream.toByteArray();
+            
+            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+            
+            log.info("QR코드 이미지 생성 완료: {}", qrCode);
+            return "data:image/png;base64," + base64Image;
+            
+        } catch (WriterException | IOException e) {
+            log.error("QR코드 이미지 생성 실패: {}", qrCode, e);
+            return null;
+        }
+    }
+    
+    /**
+     * QR코드 BitMatrix를 BufferedImage로 변환
+     */
+    private BufferedImage createQRCodeImage(BitMatrix bitMatrix) {
+        int width = bitMatrix.getWidth();
+        int height = bitMatrix.getHeight();
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                image.setRGB(x, y, bitMatrix.get(x, y) ? Color.BLACK.getRGB() : Color.WHITE.getRGB());
+            }
+        }
+        
+        return image;
+    }
+    
+    /**
+     * 고객용 QR코드 URL 생성 (주문 페이지로 이동)
+     */
+    public String generateCustomerOrderUrl(String qrCode) {
+        return String.format("%s/order/%s", frontendUrl, qrCode);
     }
 } 

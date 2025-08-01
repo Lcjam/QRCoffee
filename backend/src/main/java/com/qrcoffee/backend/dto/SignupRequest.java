@@ -26,6 +26,4 @@ public class SignupRequest {
     
     @NotNull(message = "매장 ID는 필수입니다")
     private Long storeId;
-    
-    private Long parentUserId; // 서브계정 생성 시에만 사용
 } 

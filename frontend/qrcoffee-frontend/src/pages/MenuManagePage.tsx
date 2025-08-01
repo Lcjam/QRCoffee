@@ -1,84 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
-  Typography,
-  Box,
-  Tabs,
-  Tab,
-  Button,
-  Stack,
   Card,
-  CardContent,
-  CardActions,
-  Chip,
-  IconButton,
-  Alert,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Table,
+  Button,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
   Switch,
-  FormControlLabel,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress
-} from '@mui/material';
+  message,
+  Row,
+  Col,
+  Typography,
+  Tabs,
+  Image,
+  Popconfirm,
+  Tooltip,
+  Statistic,
+  Empty,
+  Dropdown,
+  Menu as AntdMenu
+} from 'antd';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  ToggleOff as ToggleOffIcon,
-  ToggleOn as ToggleOnIcon
-} from '@mui/icons-material';
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  AppstoreOutlined,
+  ShoppingOutlined,
+  MoreOutlined,
+  EyeOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
+} from '@ant-design/icons';
 import { categoryService, menuService } from '../services/menuService';
 import { Category, CategoryRequest, Menu, MenuRequest } from '../types/menu';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel({ children, value, index }: TabPanelProps) {
-  return (
-    <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+const { Title, Text } = Typography;
+const { TabPane } = Tabs;
+const { Option } = Select;
 
 const MenuManagePage: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0);
+  const [activeTab, setActiveTab] = useState<string>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   // 카테고리 모달 관련
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [categoryFormData, setCategoryFormData] = useState<CategoryRequest>({
-    name: '',
-    displayOrder: 0,
-    isActive: true
-  });
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [categoryForm] = Form.useForm();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   // 메뉴 모달 관련
-  const [menuModalOpen, setMenuModalOpen] = useState(false);
-  const [menuFormData, setMenuFormData] = useState<MenuRequest>({
-    categoryId: 0,
-    name: '',
-    description: '',
-    price: 0,
-    imageUrl: '',
-    isAvailable: true,
-    displayOrder: 0
-  });
+  const [menuModalVisible, setMenuModalVisible] = useState(false);
+  const [menuForm] = Form.useForm();
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
 
   // 데이터 로드
@@ -87,8 +65,8 @@ const MenuManagePage: React.FC = () => {
       setLoading(true);
       const data = await categoryService.getAllCategories();
       setCategories(data);
-    } catch (err) {
-      setError('카테고리 목록을 불러오는데 실패했습니다.');
+    } catch (err: any) {
+      message.error('카테고리 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -99,81 +77,87 @@ const MenuManagePage: React.FC = () => {
       setLoading(true);
       const data = await menuService.getAllMenus();
       setMenus(data);
-    } catch (err) {
-      setError('메뉴 목록을 불러오는데 실패했습니다.');
+    } catch (err: any) {
+      message.error('메뉴 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadCategories();
-    loadMenus();
-  }, []);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+  const loadData = async () => {
+    await Promise.all([loadCategories(), loadMenus()]);
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // 카테고리 관련 핸들러
   const handleCreateCategory = () => {
-    setCategoryFormData({ name: '', displayOrder: 0, isActive: true });
     setEditingCategory(null);
-    setCategoryModalOpen(true);
+    categoryForm.resetFields();
+    categoryForm.setFieldsValue({
+      name: '',
+      displayOrder: 0,
+      isActive: true
+    });
+    setCategoryModalVisible(true);
   };
 
   const handleEditCategory = (category: Category) => {
-    setCategoryFormData({
+    setEditingCategory(category);
+    categoryForm.setFieldsValue({
       name: category.name,
       displayOrder: category.displayOrder,
       isActive: category.isActive
     });
-    setEditingCategory(category);
-    setCategoryModalOpen(true);
+    setCategoryModalVisible(true);
   };
 
   const handleSaveCategory = async () => {
     try {
+      const values = await categoryForm.validateFields();
       if (editingCategory) {
-        await categoryService.updateCategory(editingCategory.id, categoryFormData);
-        setSuccess('카테고리가 수정되었습니다.');
+        await categoryService.updateCategory(editingCategory.id, values);
+        message.success('카테고리가 수정되었습니다.');
       } else {
-        await categoryService.createCategory(categoryFormData);
-        setSuccess('카테고리가 생성되었습니다.');
+        await categoryService.createCategory(values);
+        message.success('카테고리가 생성되었습니다.');
       }
-      setCategoryModalOpen(false);
+      setCategoryModalVisible(false);
       loadCategories();
-    } catch (err) {
-      setError('카테고리 저장에 실패했습니다.');
+    } catch (err: any) {
+      if (err.errorFields) return; // 폼 검증 에러
+      message.error('카테고리 저장에 실패했습니다.');
     }
   };
 
   const handleDeleteCategory = async (categoryId: number) => {
-    if (window.confirm('정말로 이 카테고리를 삭제하시겠습니까?')) {
-      try {
-        await categoryService.deleteCategory(categoryId);
-        setSuccess('카테고리가 삭제되었습니다.');
-        loadCategories();
-      } catch (err) {
-        setError('카테고리 삭제에 실패했습니다.');
-      }
+    try {
+      await categoryService.deleteCategory(categoryId);
+      message.success('카테고리가 삭제되었습니다.');
+      loadCategories();
+    } catch (err: any) {
+      message.error('카테고리 삭제에 실패했습니다.');
     }
   };
 
   const handleToggleCategoryStatus = async (categoryId: number) => {
     try {
       await categoryService.toggleCategoryStatus(categoryId);
-      setSuccess('카테고리 상태가 변경되었습니다.');
+      message.success('카테고리 상태가 변경되었습니다.');
       loadCategories();
-    } catch (err) {
-      setError('카테고리 상태 변경에 실패했습니다.');
+    } catch (err: any) {
+      message.error('카테고리 상태 변경에 실패했습니다.');
     }
   };
 
   // 메뉴 관련 핸들러
   const handleCreateMenu = () => {
-    setMenuFormData({
-      categoryId: categories.length > 0 ? categories[0].id : 0,
+    setEditingMenu(null);
+    menuForm.resetFields();
+    menuForm.setFieldsValue({
+      categoryId: categories.length > 0 ? categories[0].id : undefined,
       name: '',
       description: '',
       price: 0,
@@ -181,12 +165,12 @@ const MenuManagePage: React.FC = () => {
       isAvailable: true,
       displayOrder: 0
     });
-    setEditingMenu(null);
-    setMenuModalOpen(true);
+    setMenuModalVisible(true);
   };
 
   const handleEditMenu = (menu: Menu) => {
-    setMenuFormData({
+    setEditingMenu(menu);
+    menuForm.setFieldsValue({
       categoryId: menu.categoryId,
       name: menu.name,
       description: menu.description || '',
@@ -195,45 +179,44 @@ const MenuManagePage: React.FC = () => {
       isAvailable: menu.isAvailable,
       displayOrder: menu.displayOrder
     });
-    setEditingMenu(menu);
-    setMenuModalOpen(true);
+    setMenuModalVisible(true);
   };
 
   const handleSaveMenu = async () => {
     try {
+      const values = await menuForm.validateFields();
       if (editingMenu) {
-        await menuService.updateMenu(editingMenu.id, menuFormData);
-        setSuccess('메뉴가 수정되었습니다.');
+        await menuService.updateMenu(editingMenu.id, values);
+        message.success('메뉴가 수정되었습니다.');
       } else {
-        await menuService.createMenu(menuFormData);
-        setSuccess('메뉴가 생성되었습니다.');
+        await menuService.createMenu(values);
+        message.success('메뉴가 생성되었습니다.');
       }
-      setMenuModalOpen(false);
+      setMenuModalVisible(false);
       loadMenus();
-    } catch (err) {
-      setError('메뉴 저장에 실패했습니다.');
+    } catch (err: any) {
+      if (err.errorFields) return; // 폼 검증 에러
+      message.error('메뉴 저장에 실패했습니다.');
     }
   };
 
   const handleDeleteMenu = async (menuId: number) => {
-    if (window.confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
-      try {
-        await menuService.deleteMenu(menuId);
-        setSuccess('메뉴가 삭제되었습니다.');
-        loadMenus();
-      } catch (err) {
-        setError('메뉴 삭제에 실패했습니다.');
-      }
+    try {
+      await menuService.deleteMenu(menuId);
+      message.success('메뉴가 삭제되었습니다.');
+      loadMenus();
+    } catch (err: any) {
+      message.error('메뉴 삭제에 실패했습니다.');
     }
   };
 
   const handleToggleMenuAvailability = async (menuId: number) => {
     try {
       await menuService.toggleMenuAvailability(menuId);
-      setSuccess('메뉴 상태가 변경되었습니다.');
+      message.success('메뉴 상태가 변경되었습니다.');
       loadMenus();
-    } catch (err) {
-      setError('메뉴 상태 변경에 실패했습니다.');
+    } catch (err: any) {
+      message.error('메뉴 상태 변경에 실패했습니다.');
     }
   };
 
@@ -242,331 +225,469 @@ const MenuManagePage: React.FC = () => {
     return category ? category.name : '알 수 없음';
   };
 
+  // 카테고리 액션 메뉴
+  const getCategoryActionMenu = (record: Category) => (
+    <AntdMenu>
+      <AntdMenu.Item 
+        key="edit" 
+        icon={<EditOutlined />}
+        onClick={() => handleEditCategory(record)}
+      >
+        수정
+      </AntdMenu.Item>
+      <AntdMenu.Item 
+        key="toggle"
+        icon={record.isActive ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+        onClick={() => handleToggleCategoryStatus(record.id)}
+      >
+        {record.isActive ? '비활성화' : '활성화'}
+      </AntdMenu.Item>
+      <AntdMenu.Divider />
+      <AntdMenu.Item 
+        key="delete"
+        danger
+        icon={<DeleteOutlined />}
+      >
+        <Popconfirm
+          title="카테고리 삭제"
+          description="정말로 이 카테고리를 삭제하시겠습니까?"
+          onConfirm={() => handleDeleteCategory(record.id)}
+          okText="삭제"
+          cancelText="취소"
+          okType="danger"
+        >
+          삭제
+        </Popconfirm>
+      </AntdMenu.Item>
+    </AntdMenu>
+  );
+
+  // 메뉴 액션 메뉴
+  const getMenuActionMenu = (record: Menu) => (
+    <AntdMenu>
+      <AntdMenu.Item 
+        key="edit" 
+        icon={<EditOutlined />}
+        onClick={() => handleEditMenu(record)}
+      >
+        수정
+      </AntdMenu.Item>
+      <AntdMenu.Item 
+        key="toggle"
+        icon={record.isAvailable ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+        onClick={() => handleToggleMenuAvailability(record.id)}
+      >
+        {record.isAvailable ? '품절처리' : '판매시작'}
+      </AntdMenu.Item>
+      <AntdMenu.Divider />
+      <AntdMenu.Item 
+        key="delete"
+        danger
+        icon={<DeleteOutlined />}
+      >
+        <Popconfirm
+          title="메뉴 삭제"
+          description="정말로 이 메뉴를 삭제하시겠습니까?"
+          onConfirm={() => handleDeleteMenu(record.id)}
+          okText="삭제"
+          cancelText="취소"
+          okType="danger"
+        >
+          삭제
+        </Popconfirm>
+      </AntdMenu.Item>
+    </AntdMenu>
+  );
+
+  // 카테고리 테이블 컬럼
+  const categoryColumns = [
+    {
+      title: '카테고리명',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: Category) => (
+        <div>
+          <Text strong>{text}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            순서: {record.displayOrder}
+          </Text>
+        </div>
+      )
+    },
+    {
+      title: '상태',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 100,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? 'green' : 'red'} icon={isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}>
+          {isActive ? '활성' : '비활성'}
+        </Tag>
+      )
+    },
+    {
+      title: '메뉴 수',
+      key: 'menuCount',
+      width: 100,
+      render: (record: Category) => {
+        const menuCount = menus.filter(menu => menu.categoryId === record.id).length;
+        return <Text>{menuCount}개</Text>;
+      }
+    },
+    {
+      title: '액션',
+      key: 'actions',
+      width: 80,
+      render: (record: Category) => (
+        <Dropdown overlay={getCategoryActionMenu(record)} trigger={['click']}>
+          <Button type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      )
+    }
+  ];
+
+  // 메뉴 테이블 컬럼
+  const menuColumns = [
+    {
+      title: '메뉴',
+      key: 'menu',
+      render: (record: Menu) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {record.imageUrl ? (
+            <Image
+              width={50}
+              height={50}
+              src={record.imageUrl}
+              style={{ borderRadius: 8, objectFit: 'cover' }}
+              preview={false}
+            />
+          ) : (
+            <div style={{ 
+              width: 50, 
+              height: 50, 
+              backgroundColor: '#f5f5f5', 
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ShoppingOutlined style={{ color: '#d9d9d9' }} />
+            </div>
+          )}
+          <div>
+            <Text strong>{record.name}</Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {record.description || '설명 없음'}
+            </Text>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '카테고리',
+      dataIndex: 'categoryId',
+      key: 'categoryId',
+      width: 120,
+      render: (categoryId: number) => (
+        <Tag color="blue">{getCategoryName(categoryId)}</Tag>
+      )
+    },
+    {
+      title: '가격',
+      dataIndex: 'price',
+      key: 'price',
+      width: 100,
+      render: (price: number) => (
+        <Text strong style={{ color: '#1890ff' }}>
+          {price.toLocaleString()}원
+        </Text>
+      )
+    },
+    {
+      title: '상태',
+      dataIndex: 'isAvailable',
+      key: 'isAvailable',
+      width: 100,
+      render: (isAvailable: boolean) => (
+        <Tag color={isAvailable ? 'green' : 'volcano'} icon={isAvailable ? <CheckCircleOutlined /> : <CloseCircleOutlined />}>
+          {isAvailable ? '판매중' : '품절'}
+        </Tag>
+      )
+    },
+    {
+      title: '액션',
+      key: 'actions',
+      width: 80,
+      render: (record: Menu) => (
+        <Dropdown overlay={getMenuActionMenu(record)} trigger={['click']}>
+          <Button type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      )
+    }
+  ];
+
+  // 통계 계산
+  const activeCategories = categories.filter(c => c.isActive).length;
+  const availableMenus = menus.filter(m => m.isAvailable).length;
+
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          메뉴 관리
-        </Typography>
-
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label="카테고리 관리" />
-            <Tab label="메뉴 관리" />
-          </Tabs>
-        </Box>
-
-        {/* 카테고리 관리 탭 */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" component="h2">
-              카테고리 목록
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreateCategory}
+    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+      {/* 헤더 */}
+      <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
+        <Col>
+          <Title level={2} style={{ margin: 0 }}>
+            메뉴 관리
+          </Title>
+        </Col>
+        <Col>
+          <Space>
+            <Button 
+              icon={<ReloadOutlined />} 
+              onClick={loadData}
+              loading={loading}
             >
-              카테고리 추가
+              새로고침
             </Button>
-          </Box>
+          </Space>
+        </Col>
+      </Row>
 
-          {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
-                     ) : (
-             <Stack spacing={3} direction="row" flexWrap="wrap">
-               {categories.map((category) => (
-                 <Box key={category.id} sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }}>
-                   <Card>
-                     <CardContent>
-                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                         <Typography variant="h6" component="h3">
-                           {category.name}
-                         </Typography>
-                         <Chip
-                           label={category.isActive ? '활성' : '비활성'}
-                           color={category.isActive ? 'success' : 'default'}
-                           size="small"
-                         />
-                       </Box>
-                       <Typography color="text.secondary" variant="body2">
-                         진열 순서: {category.displayOrder}
-                       </Typography>
-                     </CardContent>
-                     <CardActions>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleEditCategory(category)}
-                         color="primary"
-                       >
-                         <EditIcon />
-                       </IconButton>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleToggleCategoryStatus(category.id)}
-                         color="info"
-                       >
-                         {category.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
-                       </IconButton>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleDeleteCategory(category.id)}
-                         color="error"
-                       >
-                         <DeleteIcon />
-                       </IconButton>
-                     </CardActions>
-                   </Card>
-                 </Box>
-               ))}
-             </Stack>
-          )}
-        </TabPanel>
-
-        {/* 메뉴 관리 탭 */}
-        <TabPanel value={tabValue} index={1}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" component="h2">
-              메뉴 목록
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreateMenu}
-              disabled={categories.length === 0}
-            >
-              메뉴 추가
-            </Button>
-          </Box>
-
-          {categories.length === 0 ? (
-            <Alert severity="warning">
-              메뉴를 추가하려면 먼저 카테고리를 생성해주세요.
-            </Alert>
-          ) : loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
-                     ) : (
-             <Stack spacing={3} direction="row" flexWrap="wrap">
-               {menus.map((menu) => (
-                 <Box key={menu.id} sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }}>
-                   <Card>
-                     <CardContent>
-                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                         <Typography variant="h6" component="h3">
-                           {menu.name}
-                         </Typography>
-                         <Chip
-                           label={menu.isAvailable ? '판매중' : '품절'}
-                           color={menu.isAvailable ? 'success' : 'error'}
-                           size="small"
-                         />
-                       </Box>
-                       <Typography color="text.secondary" variant="body2" gutterBottom>
-                         카테고리: {getCategoryName(menu.categoryId)}
-                       </Typography>
-                       <Typography variant="body2" gutterBottom>
-                         {menu.description}
-                       </Typography>
-                       <Typography variant="h6" color="primary">
-                         {menu.price.toLocaleString()}원
-                       </Typography>
-                       <Typography color="text.secondary" variant="body2">
-                         진열 순서: {menu.displayOrder}
-                       </Typography>
-                     </CardContent>
-                     <CardActions>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleEditMenu(menu)}
-                         color="primary"
-                       >
-                         <EditIcon />
-                       </IconButton>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleToggleMenuAvailability(menu.id)}
-                         color="info"
-                       >
-                         {menu.isAvailable ? <ToggleOnIcon /> : <ToggleOffIcon />}
-                       </IconButton>
-                       <IconButton
-                         size="small"
-                         onClick={() => handleDeleteMenu(menu.id)}
-                         color="error"
-                       >
-                         <DeleteIcon />
-                       </IconButton>
-                     </CardActions>
-                   </Card>
-                 </Box>
-               ))}
-             </Stack>
-          )}
-        </TabPanel>
-      </Box>
-
-      {/* 카테고리 생성/수정 모달 */}
-      <Dialog open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCategory ? '카테고리 수정' : '카테고리 생성'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="카테고리명"
-              fullWidth
-              variant="outlined"
-              value={categoryFormData.name}
-              onChange={(e) => setCategoryFormData(prev => ({ ...prev, name: e.target.value }))}
-              sx={{ mb: 2 }}
+      {/* 통계 카드 */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="총 카테고리"
+              value={categories.length}
+              suffix="개"
+              valueStyle={{ color: '#1890ff' }}
+              prefix={<AppstoreOutlined />}
             />
-            <TextField
-              margin="dense"
-              label="진열 순서"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={categoryFormData.displayOrder}
-              onChange={(e) => setCategoryFormData(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-              sx={{ mb: 2 }}
+            <Text type="secondary">활성: {activeCategories}개</Text>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="총 메뉴"
+              value={menus.length}
+              suffix="개"
+              valueStyle={{ color: '#52c41a' }}
+              prefix={<ShoppingOutlined />}
             />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={categoryFormData.isActive}
-                  onChange={(e) => setCategoryFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                />
-              }
-              label="활성화"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryModalOpen(false)}>취소</Button>
-          <Button onClick={handleSaveCategory} variant="contained">
-            {editingCategory ? '수정' : '생성'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Text type="secondary">판매중: {availableMenus}개</Text>
+          </Card>
+        </Col>
+      </Row>
 
-      {/* 메뉴 생성/수정 모달 */}
-      <Dialog open={menuModalOpen} onClose={() => setMenuModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingMenu ? '메뉴 수정' : '메뉴 생성'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>카테고리</InputLabel>
-              <Select
-                value={menuFormData.categoryId}
-                label="카테고리"
-                onChange={(e) => setMenuFormData(prev => ({ ...prev, categoryId: e.target.value as number }))}
-              >
-                {categories.filter(c => c.isActive).map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              margin="dense"
-              label="메뉴명"
-              fullWidth
-              variant="outlined"
-              value={menuFormData.name}
-              onChange={(e) => setMenuFormData(prev => ({ ...prev, name: e.target.value }))}
-              sx={{ mb: 2 }}
+      {/* 탭 및 콘텐츠 */}
+      <Card>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          tabBarExtraContent={
+            <Space>
+              {activeTab === 'categories' && (
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />}
+                  onClick={handleCreateCategory}
+                >
+                  카테고리 추가
+                </Button>
+              )}
+              {activeTab === 'menus' && (
+                <Button 
+                  type="primary" 
+                  icon={<PlusOutlined />}
+                  onClick={handleCreateMenu}
+                  disabled={categories.length === 0}
+                >
+                  메뉴 추가
+                </Button>
+              )}
+            </Space>
+          }
+        >
+          <TabPane 
+            tab={
+              <span>
+                <AppstoreOutlined />
+                카테고리 관리
+              </span>
+            } 
+            key="categories"
+          >
+            <Table
+              columns={categoryColumns}
+              dataSource={categories}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} / 총 ${total}개`
+              }}
+              locale={{
+                emptyText: <Empty description="등록된 카테고리가 없습니다." />
+              }}
             />
-            <TextField
-              margin="dense"
-              label="메뉴 설명"
-              fullWidth
-              multiline
+          </TabPane>
+
+          <TabPane 
+            tab={
+              <span>
+                <ShoppingOutlined />
+                메뉴 관리
+              </span>
+            } 
+            key="menus"
+          >
+            <Table
+              columns={menuColumns}
+              dataSource={menus}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} / 총 ${total}개`
+              }}
+              locale={{
+                emptyText: <Empty description="등록된 메뉴가 없습니다." />
+              }}
+            />
+          </TabPane>
+        </Tabs>
+      </Card>
+
+      {/* 카테고리 추가/수정 모달 */}
+      <Modal
+        title={editingCategory ? "카테고리 수정" : "카테고리 추가"}
+        open={categoryModalVisible}
+        onOk={handleSaveCategory}
+        onCancel={() => setCategoryModalVisible(false)}
+        okText="저장"
+        cancelText="취소"
+      >
+        <Form
+          form={categoryForm}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="name"
+            label="카테고리명"
+            rules={[{ required: true, message: '카테고리명을 입력해주세요.' }]}
+          >
+            <Input placeholder="카테고리명을 입력하세요" />
+          </Form.Item>
+          <Form.Item
+            name="displayOrder"
+            label="표시 순서"
+            rules={[{ required: true, message: '표시 순서를 입력해주세요.' }]}
+          >
+            <InputNumber 
+              min={0} 
+              style={{ width: '100%' }}
+              placeholder="표시 순서를 입력하세요"
+            />
+          </Form.Item>
+          <Form.Item
+            name="isActive"
+            label="활성 상태"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="활성" unCheckedChildren="비활성" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 메뉴 추가/수정 모달 */}
+      <Modal
+        title={editingMenu ? "메뉴 수정" : "메뉴 추가"}
+        open={menuModalVisible}
+        onOk={handleSaveMenu}
+        onCancel={() => setMenuModalVisible(false)}
+        okText="저장"
+        cancelText="취소"
+        width={600}
+      >
+        <Form
+          form={menuForm}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            name="categoryId"
+            label="카테고리"
+            rules={[{ required: true, message: '카테고리를 선택해주세요.' }]}
+          >
+            <Select placeholder="카테고리를 선택하세요">
+              {categories.map(category => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="name"
+            label="메뉴명"
+            rules={[{ required: true, message: '메뉴명을 입력해주세요.' }]}
+          >
+            <Input placeholder="메뉴명을 입력하세요" />
+          </Form.Item>
+          <Form.Item
+            name="description"
+            label="메뉴 설명"
+          >
+            <Input.TextArea 
               rows={3}
-              variant="outlined"
-              value={menuFormData.description}
-              onChange={(e) => setMenuFormData(prev => ({ ...prev, description: e.target.value }))}
-              sx={{ mb: 2 }}
+              placeholder="메뉴 설명을 입력하세요"
             />
-            <TextField
-              margin="dense"
-              label="가격 (원)"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={menuFormData.price}
-              onChange={(e) => setMenuFormData(prev => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
-              sx={{ mb: 2 }}
+          </Form.Item>
+          <Form.Item
+            name="price"
+            label="가격"
+            rules={[{ required: true, message: '가격을 입력해주세요.' }]}
+          >
+                         <InputNumber 
+               min={0} 
+               style={{ width: '100%' }}
+               placeholder="가격을 입력하세요"
+               addonAfter="원"
+             />
+          </Form.Item>
+          <Form.Item
+            name="imageUrl"
+            label="이미지 URL"
+          >
+            <Input placeholder="이미지 URL을 입력하세요" />
+          </Form.Item>
+          <Form.Item
+            name="displayOrder"
+            label="표시 순서"
+            rules={[{ required: true, message: '표시 순서를 입력해주세요.' }]}
+          >
+            <InputNumber 
+              min={0} 
+              style={{ width: '100%' }}
+              placeholder="표시 순서를 입력하세요"
             />
-            <TextField
-              margin="dense"
-              label="이미지 URL"
-              fullWidth
-              variant="outlined"
-              value={menuFormData.imageUrl}
-              onChange={(e) => setMenuFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              label="진열 순서"
-              type="number"
-              fullWidth
-              variant="outlined"
-              value={menuFormData.displayOrder}
-              onChange={(e) => setMenuFormData(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
-              sx={{ mb: 2 }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={menuFormData.isAvailable}
-                  onChange={(e) => setMenuFormData(prev => ({ ...prev, isAvailable: e.target.checked }))}
-                />
-              }
-              label="판매 가능"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMenuModalOpen(false)}>취소</Button>
-          <Button onClick={handleSaveMenu} variant="contained">
-            {editingMenu ? '수정' : '생성'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* 성공/에러 메시지 */}
-      <Snackbar
-        open={!!success}
-        autoHideDuration={3000}
-        onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setSuccess(null)} severity="success">
-          {success}
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={!!error}
-        autoHideDuration={5000}
-        onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setError(null)} severity="error">
-          {error}
-        </Alert>
-      </Snackbar>
-    </Container>
+          </Form.Item>
+          <Form.Item
+            name="isAvailable"
+            label="판매 상태"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="판매중" unCheckedChildren="품절" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 };
 

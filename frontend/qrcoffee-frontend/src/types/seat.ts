@@ -4,8 +4,8 @@ export interface Seat {
   seatNumber: string;
   description?: string;
   qrCode: string;
+  qrCodeImageUrl?: string;
   isActive: boolean;
-  isOccupied: boolean;
   maxCapacity: number;
   createdAt: string;
   updatedAt: string;
@@ -20,8 +20,6 @@ export interface SeatRequest {
 export interface SeatStats {
   totalSeats: number;
   activeSeats: number;
-  occupiedSeats: number;
-  availableSeats: number;
 }
 
 export interface SeatManagementContextType {
@@ -34,7 +32,6 @@ export interface SeatManagementContextType {
   createSeat: (seatData: SeatRequest) => Promise<void>;
   updateSeat: (id: number, seatData: SeatRequest) => Promise<void>;
   toggleSeatStatus: (id: number) => Promise<void>;
-  toggleOccupancy: (id: number) => Promise<void>;
   regenerateQRCode: (id: number) => Promise<void>;
   deleteSeat: (id: number) => Promise<void>;
 } 

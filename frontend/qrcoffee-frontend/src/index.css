@@ -1,13 +1,244 @@
+/* Ant Design Pro 스타일 전역 CSS */
+
+/* 기본 폰트 및 스타일 설정 */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f2f5;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 카드 호버 효과 */
+.ant-card {
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* 통계 카드 스타일 */
+.ant-statistic {
+  text-align: center;
+}
+
+.ant-statistic .ant-statistic-content {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.ant-statistic .ant-statistic-title {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* 프로그레스 바 애니메이션 */
+.ant-progress-line .ant-progress-bg {
+  transition: all 0.6s ease;
+}
+
+/* 버튼 호버 효과 개선 */
+.ant-btn {
+  transition: all 0.3s ease;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border: none;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
+
+/* 메뉴 아이템 스타일 */
+.ant-menu-dark .ant-menu-item-selected {
+  background: linear-gradient(90deg, #1890ff 0%, #40a9ff 100%) !important;
+  border-radius: 6px;
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+}
+
+.ant-menu-dark .ant-menu-item {
+  margin: 4px 8px;
+  width: calc(100% - 16px);
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.ant-menu-dark .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 레이아웃 애니메이션 */
+.ant-layout-sider {
+  transition: all 0.3s ease;
+}
+
+.ant-layout-header {
+  transition: all 0.3s ease;
+}
+
+/* 차트 컨테이너 스타일 */
+.recharts-wrapper {
+  font-size: 12px;
+}
+
+.recharts-cartesian-axis-tick-value {
+  font-size: 12px;
+  fill: #666;
+}
+
+.recharts-tooltip-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 로딩 애니메이션 개선 */
+.ant-spin {
+  color: #1890ff;
+}
+
+/* 알림 스타일 개선 */
+.ant-alert {
+  border-radius: 8px;
+  border: none;
+}
+
+.ant-alert-info {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+}
+
+.ant-alert-success {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+}
+
+.ant-alert-warning {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+}
+
+.ant-alert-error {
+  background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+}
+
+/* 타임라인 스타일 */
+.ant-timeline-item-head {
+  border: 2px solid #1890ff;
+  background: #fff;
+}
+
+.ant-timeline-item-tail {
+  border-left: 2px solid #f0f0f0;
+}
+
+/* 입력 필드 포커스 효과 */
+.ant-input:focus,
+.ant-input-password:focus {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 테이블 스타일 개선 */
+.ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 2px solid #f0f0f0;
+  font-weight: 600;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f5f5f5;
+}
+
+/* 드래그 앤 드롭 효과 */
+.draggable-item {
+  transition: all 0.3s ease;
+  cursor: move;
+}
+
+.draggable-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 로딩 스켈레톤 */
+.ant-skeleton-button {
+  border-radius: 6px;
+}
+
+.ant-skeleton-input {
+  border-radius: 6px;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    z-index: 999;
+    height: 100vh;
+  }
+  
+  .ant-layout-content {
+    margin-left: 0 !important;
+    margin: 16px !important;
+    padding: 16px !important;
+  }
+  
+  .ant-card {
+    margin-bottom: 16px;
+  }
+  
+  .ant-statistic .ant-statistic-content {
+    font-size: 20px;
+  }
+}
+
+/* 다크 모드 대응 (향후 확장용) */
+@media (prefers-color-scheme: dark) {
+  /* 다크 모드 스타일은 추후 추가 예정 */
+}
+
+/* 성능 최적화를 위한 GPU 가속 */
+.ant-card,
+.ant-btn,
+.ant-menu-item {
+  will-change: transform;
+  transform: translateZ(0);
 }

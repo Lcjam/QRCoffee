@@ -124,18 +124,7 @@ public class SeatController {
         return ResponseEntity.ok(ApiResponse.success("좌석 상태가 변경되었습니다.", seat));
     }
     
-    /**
-     * 좌석 점유 상태 토글
-     */
-    @PatchMapping("/{seatId}/toggle-occupancy")
-    @PreAuthorize("hasRole('MASTER') or hasRole('SUB')")
-    public ResponseEntity<ApiResponse<SeatResponse>> toggleSeatOccupancy(
-            @PathVariable Long seatId,
-            HttpServletRequest request) {
-        Long storeId = jwtUtil.getStoreIdFromRequest(request);
-        SeatResponse seat = seatService.toggleSeatOccupancy(seatId, storeId);
-        return ResponseEntity.ok(ApiResponse.success("좌석 점유 상태가 변경되었습니다.", seat));
-    }
+
     
     /**
      * QR코드 재생성
@@ -159,5 +148,16 @@ public class SeatController {
         Long storeId = jwtUtil.getStoreIdFromRequest(request);
         SeatStatsResponse stats = seatService.getSeatStats(storeId);
         return ResponseEntity.ok(ApiResponse.success("좌석 통계를 조회했습니다.", stats));
+    }
+    
+    /**
+     * 모든 좌석의 QR코드 이미지 업데이트
+     */
+    @PatchMapping("/update-qr-images")
+    @PreAuthorize("hasRole('MASTER')")
+    public ResponseEntity<ApiResponse<List<SeatResponse>>> updateAllQRCodeImages(HttpServletRequest request) {
+        Long storeId = jwtUtil.getStoreIdFromRequest(request);
+        List<SeatResponse> seats = seatService.updateAllQRCodeImages(storeId);
+        return ResponseEntity.ok(ApiResponse.success("모든 좌석의 QR코드 이미지가 업데이트되었습니다.", seats));
     }
 } 

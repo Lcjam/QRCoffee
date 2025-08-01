@@ -26,14 +26,13 @@ public class SubAccountRequest {
     /**
      * SignupRequest로 변환
      */
-    public SignupRequest toSignupRequest(Long storeId, Long parentUserId) {
+    public SignupRequest toSignupRequest(Long storeId) {
         SignupRequest signupRequest = new SignupRequest();
         signupRequest.setEmail(this.email);
         signupRequest.setPassword(this.password);
         signupRequest.setName(this.name);
         signupRequest.setPhone(this.phone);
         signupRequest.setStoreId(storeId);
-        signupRequest.setParentUserId(parentUserId);
         return signupRequest;
     }
 } 

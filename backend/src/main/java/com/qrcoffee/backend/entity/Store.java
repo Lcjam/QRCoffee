@@ -36,7 +36,8 @@ public class Store {
     @Column(name = "business_hours", columnDefinition = "JSON")
     private String businessHours;
     
-    @Column(name = "is_active")
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
     
     @CreatedDate

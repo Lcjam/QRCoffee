@@ -88,18 +88,7 @@ export const seatService = {
     return apiResponse.data;
   },
 
-  // 좌석 점유 상태 토글
-  toggleOccupancy: async (id: number): Promise<Seat> => {
-    const response = await fetch(`${API_BASE_URL}/api/seats/${id}/toggle-occupancy`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-    });
-    const apiResponse = await handleResponse<Seat>(response);
-    if (!apiResponse.data) {
-      throw new Error('좌석 점유 상태 변경에 실패했습니다.');
-    }
-    return apiResponse.data;
-  },
+
 
   // QR코드 재생성
   regenerateQRCode: async (id: number): Promise<Seat> => {

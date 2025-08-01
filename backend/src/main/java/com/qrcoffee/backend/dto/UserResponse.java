@@ -20,10 +20,10 @@ public class UserResponse {
     private String phone;
     private String role;
     private Long storeId;
-    private Long parentUserId;
+    private String storeName;
     private Boolean isActive;
-    private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -32,11 +32,11 @@ public class UserResponse {
                 .name(user.getName())
                 .phone(user.getPhone())
                 .role(user.getRole().name())
-                .storeId(user.getStoreId())
-                .parentUserId(user.getParentUserId())
+                .storeId(user.getStore() != null ? user.getStore().getId() : null)
+                .storeName(user.getStore() != null ? user.getStore().getName() : null)
                 .isActive(user.getIsActive())
-                .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 } 

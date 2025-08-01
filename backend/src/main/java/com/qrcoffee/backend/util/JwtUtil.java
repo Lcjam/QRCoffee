@@ -167,10 +167,10 @@ public class JwtUtil {
     private Claims getClaims(String token) {
         try {
             return Jwts.parser()
-                    .setSigningKey(secretKey)
+                    .verifyWith(secretKey)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
         } catch (ExpiredJwtException e) {
             log.error("JWT token is expired: {}", e.getMessage());
             throw e;

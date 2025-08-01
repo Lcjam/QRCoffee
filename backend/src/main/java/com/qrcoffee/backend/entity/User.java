@@ -1,66 +1,60 @@
 package com.qrcoffee.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
+@ToString
 public class User {
-    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(unique = true, nullable = false, length = 100)
+    @Column(unique = true, nullable = false)
     private String email;
     
     @Column(nullable = false)
     private String password;
     
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
     private String name;
     
-    @Column(length = 20)
+    @Column(length = 15)
     private String phone;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Role role = Role.MASTER;
     
-    @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
     
-    @Column(name = "parent_user_id")
-    private Long parentUserId;
-    
-    @Column(name = "is_active")
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isActive = true;
     
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
-    
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
-    @LastModifiedDate
-    @Column(name = "updated_at")
+    @UpdateTimestamp
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
     
     public enum Role {
-        MASTER, SUB
+        MASTER,
+        STAFF
     }
 } 

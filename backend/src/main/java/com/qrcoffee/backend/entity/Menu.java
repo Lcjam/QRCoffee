@@ -43,10 +43,11 @@ public class Menu {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
     
-    @Column(name = "is_available")
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isAvailable = true;
     
-    @Column(name = "display_order")
+    @Builder.Default
     private Integer displayOrder = 0;
     
     @CreatedDate

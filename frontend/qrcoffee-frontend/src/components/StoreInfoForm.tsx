@@ -9,7 +9,13 @@ import {
   Switch,
   Alert,
   CircularProgress,
-  Stack
+  Stack,
+  Checkbox,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Grid
 } from '@mui/material';
 import { Store, StoreRequest, BusinessHours } from '../types/store';
 
@@ -32,6 +38,7 @@ const StoreInfoForm: React.FC<StoreInfoFormProps> = ({
     isActive: true
   });
   const [businessHours, setBusinessHours] = useState<BusinessHours>({});
+  const [activeDays, setActiveDays] = useState<{[key: string]: boolean}>({});
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
@@ -50,6 +57,13 @@ const StoreInfoForm: React.FC<StoreInfoFormProps> = ({
         try {
           const parsedHours = JSON.parse(store.businessHours);
           setBusinessHours(parsedHours);
+          
+          // 활성화된 요일 설정
+          const activeDaysObj: {[key: string]: boolean} = {};
+          Object.keys(parsedHours).forEach(day => {
+            activeDaysObj[day] = Boolean(parsedHours[day]);
+          });
+          setActiveDays(activeDaysObj);
         } catch (e) {
           console.warn('Failed to parse business hours:', e);
         }
@@ -70,11 +84,48 @@ const StoreInfoForm: React.FC<StoreInfoFormProps> = ({
     if (success) setSuccess('');
   };
 
-  const handleBusinessHoursChange = (day: keyof BusinessHours, value: string) => {
-    setBusinessHours(prev => ({ ...prev, [day]: value }));
+  const handleDayToggle = (day: string, checked: boolean) => {
+    setActiveDays(prev => ({ ...prev, [day]: checked }));
+    if (!checked) {
+      // 체크 해제시 영업시간도 제거
+      setBusinessHours(prev => {
+        const newHours = { ...prev };
+        delete newHours[day as keyof BusinessHours];
+        return newHours;
+      });
+    }
     if (error) setError('');
     if (success) setSuccess('');
   };
+
+  const handleTimeChange = (day: string, type: 'open' | 'close', value: string) => {
+    setBusinessHours(prev => {
+      const currentHours = prev[day as keyof BusinessHours] || '';
+      const [openTime, closeTime] = currentHours.split('-');
+      
+      if (type === 'open') {
+        return { ...prev, [day]: `${value}-${closeTime || '22:00'}` };
+      } else {
+        return { ...prev, [day]: `${openTime || '09:00'}-${value}` };
+      }
+    });
+    if (error) setError('');
+    if (success) setSuccess('');
+  };
+
+  // 시간 옵션 생성 (30분 단위)
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute of [0, 30]) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        options.push(timeString);
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
@@ -177,24 +228,63 @@ const StoreInfoForm: React.FC<StoreInfoFormProps> = ({
             <Typography variant="subtitle1" gutterBottom>
               영업시간
             </Typography>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 2
-            }}>
-              {daysOfWeek.map(({ key, label }) => (
-                <TextField
-                  key={key}
-                  fullWidth
-                  label={label}
-                  value={businessHours[key as keyof BusinessHours] || ''}
-                  onChange={(e) => handleBusinessHoursChange(key as keyof BusinessHours, e.target.value)}
-                  placeholder="09:00-22:00"
-                  disabled={isLoading}
-                  size="small"
-                />
-              ))}
-            </Box>
+            <Stack spacing={2}>
+              {daysOfWeek.map(({ key, label }) => {
+                const isActive = activeDays[key] || false;
+                const currentHours = businessHours[key as keyof BusinessHours] || '';
+                const [openTime, closeTime] = currentHours.split('-');
+                
+                return (
+                  <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={isActive}
+                          onChange={(e) => handleDayToggle(key, e.target.checked)}
+                          disabled={isLoading}
+                        />
+                      }
+                      label={label}
+                      sx={{ minWidth: '100px' }}
+                    />
+                    
+                    {isActive && (
+                      <>
+                        <FormControl size="small" sx={{ minWidth: '100px' }}>
+                          <InputLabel>오픈</InputLabel>
+                          <Select
+                            value={openTime || '09:00'}
+                            onChange={(e) => handleTimeChange(key, 'open', e.target.value)}
+                            disabled={isLoading}
+                            label="오픈"
+                          >
+                            {timeOptions.map(time => (
+                              <MenuItem key={time} value={time}>{time}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        
+                        <Typography>~</Typography>
+                        
+                        <FormControl size="small" sx={{ minWidth: '100px' }}>
+                          <InputLabel>마감</InputLabel>
+                          <Select
+                            value={closeTime || '22:00'}
+                            onChange={(e) => handleTimeChange(key, 'close', e.target.value)}
+                            disabled={isLoading}
+                            label="마감"
+                          >
+                            {timeOptions.map(time => (
+                              <MenuItem key={time} value={time}>{time}</MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </>
+                    )}
+                  </Box>
+                );
+              })}
+            </Stack>
           </Box>
 
           <FormControlLabel
