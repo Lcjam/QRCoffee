@@ -12,6 +12,11 @@ import StoreManagePage from './pages/StoreManagePage';
 import SubAccountManagePage from './pages/SubAccountManagePage';
 import MenuManagePage from './pages/MenuManagePage';
 import SeatManagePage from './pages/SeatManagePage';
+import CustomerOrderPage from './pages/CustomerOrderPage';
+import OrderCheckoutPage from './pages/OrderCheckoutPage';
+import OrderCompletePage from './pages/OrderCompletePage';
+import OrderStatusPage from './pages/OrderStatusPage';
+import OrderManagePage from './pages/OrderManagePage';
 
 // Material-UI 테마 설정
 const theme = createTheme({
@@ -86,6 +91,22 @@ function App() {
                 </PrivateRoute>
               } 
             />
+            
+            {/* 주문 관리 페이지 (관리자용) */}
+            <Route 
+              path="/order-management" 
+              element={
+                <PrivateRoute>
+                  <OrderManagePage />
+                </PrivateRoute>
+              } 
+            />
+            
+            {/* 고객용 주문 페이지 (공개) */}
+            <Route path="/order" element={<CustomerOrderPage />} />
+            <Route path="/order/checkout" element={<OrderCheckoutPage />} />
+            <Route path="/order/complete" element={<OrderCompletePage />} />
+            <Route path="/order/status/:orderId" element={<OrderStatusPage />} />
             
             {/* 루트 경로는 대시보드로 리다이렉트 */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
