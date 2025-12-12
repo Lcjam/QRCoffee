@@ -2,11 +2,11 @@ import axios from 'axios';
 import { LoginRequest, SignupRequest, JwtResponse, User } from '../types/auth';
 import { ApiResponse } from '../types/api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 // Axios 인스턴스 생성
 const authApi = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 10000,
 });
 

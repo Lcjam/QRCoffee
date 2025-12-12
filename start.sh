@@ -51,9 +51,25 @@ fi
 # PID 파일 디렉토리 생성
 mkdir -p .pids
 
+# 프론트엔드 의존성 확인 및 설치
+echo -e "${BLUE}📦 프론트엔드 의존성 확인 중...${NC}"
+cd frontend/qrcoffee-frontend
+if [ ! -d "node_modules" ]; then
+    echo -e "${YELLOW}⚠️  node_modules가 없습니다. npm install을 실행합니다...${NC}"
+    npm install
+fi
+cd ../..
+
 # 백엔드 시작
 echo -e "${BLUE}📦 백엔드 시작 중...${NC}"
 cd backend
+# Gradle Wrapper jar 파일 확인
+if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+    echo -e "${YELLOW}⚠️  Gradle Wrapper jar 파일이 없습니다.${NC}"
+    echo -e "${YELLOW}   Gradle을 설치하거나 Wrapper를 수동으로 설정해주세요.${NC}"
+    echo -e "${YELLOW}   또는 'gradle wrapper' 명령어를 실행해주세요.${NC}"
+    exit 1
+fi
 ./gradlew bootRun > ../.pids/backend.log 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > ../.pids/backend.pid
