@@ -62,6 +62,12 @@ const CustomerOrderPage: React.FC = () => {
   }, [qrCode]);
 
   const loadSeatAndMenus = async () => {
+    if (!qrCode) {
+      setError('QR코드 정보가 없습니다.');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');

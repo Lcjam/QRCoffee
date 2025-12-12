@@ -71,7 +71,8 @@ public class UserService {
                 .name(request.getName())
                 .phone(request.getPhone())
                 .role(User.Role.MASTER)
-                .store(store)
+                .storeId(store.getId())
+                .isActive(true)
                 .build();
     }
     
@@ -105,7 +106,9 @@ public class UserService {
         
         // 계정 및 매장 활성화 상태 확인
         ValidationUtils.validateUserActive(user);
-        ValidationUtils.validateStoreActive(user.getStore());
+        Store store = storeRepository.findByIdAndIsActive(user.getStoreId(), true)
+                .orElse(null);
+        ValidationUtils.validateStoreExistsAndActive(store, user.getStoreId());
         
         return user;
     }
@@ -128,7 +131,7 @@ public class UserService {
                 user.getEmail(), 
                 user.getId(), 
                 user.getRole().name(), 
-                user.getStore() != null ? user.getStore().getId() : null
+                user.getStoreId()
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
@@ -139,7 +142,7 @@ public class UserService {
                 user.getEmail(),
                 user.getName(),
                 user.getRole().name(),
-                user.getStore() != null ? user.getStore().getId() : null
+                user.getStoreId()
         );
     }
     
@@ -163,10 +166,62 @@ public class UserService {
      * 매장별 사용자 목록 조회
      */
     public List<UserResponse> getUsersByStore(Long storeId) {
-        List<User> users = userRepository.findByStore_IdAndIsActive(storeId, true);
+        List<User> users = userRepository.findByStoreIdAndIsActive(storeId, true);
         return users.stream()
                 .map(UserResponse::from)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * 서브계정 목록 조회
+     */
+    public List<UserResponse> getSubAccounts(Long masterUserId) {
+        List<User> subAccounts = userRepository.findByParentUserIdAndIsActive(masterUserId, true);
+        return subAccounts.stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 서브계정 생성
+     */
+    @Transactional
+    public UserResponse createSubAccount(SignupRequest request, Long masterUserId) {
+        log.info("서브계정 생성 시도: {} by masterUserId={}", request.getEmail(), masterUserId);
+        
+        // 마스터 사용자 조회 및 권한 검증
+        User masterUser = findUserById(masterUserId);
+        ValidationUtils.validateMasterRole(masterUser);
+        
+        // 이메일 중복 검증
+        ValidationUtils.validateEmailNotDuplicate(
+                request.getEmail(), 
+                userRepository.existsByEmail(request.getEmail())
+        );
+        
+        // 서브계정 생성
+        User subUser = createSubUser(request, masterUser);
+        User savedUser = userRepository.save(subUser);
+        
+        log.info("서브계정 생성 완료: {} (ID: {})", savedUser.getEmail(), savedUser.getId());
+        
+        return UserResponse.from(savedUser);
+    }
+    
+    /**
+     * 서브 사용자 생성
+     */
+    private User createSubUser(SignupRequest request, User masterUser) {
+        return User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .name(request.getName())
+                .phone(request.getPhone())
+                .role(User.Role.SUB)
+                .storeId(masterUser.getStoreId())
+                .parentUserId(masterUser.getId())
+                .isActive(true)
+                .build();
     }
     
     /**
@@ -207,8 +262,12 @@ public class UserService {
                 userRepository.existsByEmail(request.getEmail())
         );
         
+        // 매장 조회
+        Store store = storeRepository.findByIdAndIsActive(masterUser.getStoreId(), true)
+                .orElseThrow(() -> new BusinessException("매장을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        
         // 직원 계정 생성
-        User staffUser = createStaffUser(request, masterUser.getStore());
+        User staffUser = createStaffUser(request, store);
         User savedUser = userRepository.save(staffUser);
         
         log.info("{}: {} (ID: {})", STAFF_ACCOUNT_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
@@ -225,8 +284,9 @@ public class UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phone(request.getPhone())
-                .role(User.Role.STAFF)
-                .store(store)
+                .role(User.Role.SUB)
+                .storeId(store.getId())
+                .isActive(true)
                 .build();
     }
     
