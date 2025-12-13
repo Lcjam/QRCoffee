@@ -59,17 +59,17 @@ public class ValidationUtils {
      * 매장 소유권 검증
      */
     public static void validateStoreOwnership(User owner, User target) {
-        if (owner.getStore() == null) {
+        if (owner.getStoreId() == null) {
             log.warn("매장이 없는 사용자의 매장 관리 시도: {}", owner.getEmail());
             throw new BusinessException("매장 정보가 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
-        if (target.getStore() == null) {
+        if (target.getStoreId() == null) {
             log.warn("매장이 없는 대상 사용자: {}", target.getEmail());
             throw new BusinessException("대상 사용자의 매장 정보가 없습니다.", HttpStatus.BAD_REQUEST);
         }
 
-        if (!owner.getStore().getId().equals(target.getStore().getId())) {
+        if (!owner.getStoreId().equals(target.getStoreId())) {
             log.warn("다른 매장 사용자 관리 시도: {} -> {}", owner.getEmail(), target.getEmail());
             throw new BusinessException("같은 매장의 사용자만 관리할 수 있습니다.", HttpStatus.FORBIDDEN);
         }

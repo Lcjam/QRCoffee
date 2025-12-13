@@ -104,4 +104,14 @@ public class QRCodeUtil {
     public void logQRCodeScan(String qrCode, String userAgent, String ipAddress) {
         log.info("QR코드 스캔 - QR코드: {}, UserAgent: {}, IP: {}", qrCode, userAgent, ipAddress);
     }
+    
+    /**
+     * QR코드 이미지 URL 생성 (실제 구현은 추후 추가)
+     * 현재는 플레이스홀더 URL 반환
+     */
+    public String generateQRCodeImage(String qrCode) {
+        // TODO: 실제 QR코드 이미지 생성 및 저장 로직 구현
+        // 현재는 플레이스홀더 URL 반환
+        return String.format("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=%s", qrCode);
+    }
 } 

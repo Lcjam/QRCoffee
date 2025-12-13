@@ -10,6 +10,7 @@ import com.qrcoffee.backend.util.QRCodeUtil;
 import com.qrcoffee.backend.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -348,6 +349,32 @@ public class SeatService {
             seat.setQrCodeImageUrl(qrCodeImageUrl);
             log.info("좌석 QR코드 이미지 업데이트: seatId={}, seatNumber={}", seat.getId(), seat.getSeatNumber());
         }
+    }
+    
+    /**
+     * 좌석 점유 상태 토글
+     */
+    @Transactional
+    public SeatResponse toggleSeatOccupancy(Long seatId, Long storeId) {
+        log.info("좌석 점유 상태 토글: seatId={}, storeId={}", seatId, storeId);
+        
+        // 좌석 조회 및 검증
+        Seat seat = seatRepository.findById(seatId)
+                .orElseThrow(() -> new BusinessException("좌석을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        
+        ValidationUtils.validateSeatStoreOwnership(seat, storeId);
+        
+        // 점유 상태 토글
+        seat.setIsOccupied(!seat.getIsOccupied());
+        
+        if (seat.getIsOccupied()) {
+            seat.setLastUsedAt(LocalDateTime.now());
+        }
+        
+        Seat updatedSeat = seatRepository.save(seat);
+        log.info("좌석 점유 상태 변경: seatId={}, isOccupied={}", seatId, updatedSeat.getIsOccupied());
+        
+        return SeatResponse.from(updatedSeat);
     }
     
     /**
