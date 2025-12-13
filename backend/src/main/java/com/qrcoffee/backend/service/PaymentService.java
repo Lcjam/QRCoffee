@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Base64;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -64,11 +62,13 @@ public class PaymentService {
     public PaymentResponse prepareCartPayment(CartPaymentRequest request, User user) {
         log.info("장바구니 결제 준비 시작: amount={}, items={}", request.getTotalAmount(), request.getOrderItems().size());
         
-        String orderIdToss = generateOrderId(user.getId());
+        // 비회원 결제 지원: userId가 없으면 0으로 설정
+        Long userId = (user != null) ? user.getId() : 0L;
+        String orderIdToss = generateOrderId(userId);
         Payment payment = createPendingPayment(request, orderIdToss);
         
         // 장바구니 정보를 메타데이터로 저장
-        Map<String, Object> metadata = buildCartMetadata(request, user.getId());
+        Map<String, Object> metadata = buildCartMetadata(request, userId);
         payment.setMetadata(metadata);
 
         Payment savedPayment = paymentRepository.save(payment);
@@ -140,6 +140,7 @@ public class PaymentService {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("cartItems", request.getOrderItems());
         metadata.put("seatId", request.getSeatId());
+        metadata.put("storeId", request.getStoreId());
         metadata.put("customerName", request.getCustomerName());
         metadata.put("customerPhone", request.getCustomerPhone());
         metadata.put("userId", userId);
@@ -439,13 +440,13 @@ public class PaymentService {
         List<OrderItemRequest> orderItems = extractOrderItemsFromMetadata(metadata);
         
         return OrderRequest.builder()
-                .storeId(DEFAULT_STORE_ID)
+                .storeId(extractLongFromMetadata(metadata, "storeId"))
                 .orderItems(orderItems)
                 .seatId(extractLongFromMetadata(metadata, "seatId"))
-                .totalAmount(payment.getTotalAmount())
+                // totalAmount는 OrderService에서 주문 항목으로부터 자동 계산됨
                 .customerName((String) metadata.get("customerName"))
                 .customerPhone((String) metadata.get("customerPhone"))
-                .customerRequest("")
+                .customerRequest((String) metadata.getOrDefault("customerRequest", ""))
                 .build();
     }
     
@@ -576,8 +577,8 @@ public class PaymentService {
                 .method(payment.getMethod())
                 .requestedAt(payment.getRequestedAt() != null ? payment.getRequestedAt().toString() : null)
                 .approvedAt(payment.getApprovedAt() != null ? payment.getApprovedAt().toString() : null)
-                .createdAt(payment.getCreatedAt())
-                .updatedAt(payment.getUpdatedAt())
+                .createdAt(payment.getCreatedAt() != null ? payment.getCreatedAt().toString() : null)
+                .updatedAt(payment.getUpdatedAt() != null ? payment.getUpdatedAt().toString() : null)
                 .currency(payment.getCurrency())
                 .country(payment.getCountry())
                 .version(payment.getVersion())
@@ -590,8 +591,7 @@ public class PaymentService {
     private PaymentResponse buildPaymentResponseFromToss(Map<String, Object> responseBody) {
         try {
             // ObjectMapper로 JsonNode 변환
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.valueToTree(responseBody);
+            JsonNode jsonNode = objectMapper.valueToTree(responseBody);
             
             log.debug("토스페이먼츠 응답 파싱 시작");
             
