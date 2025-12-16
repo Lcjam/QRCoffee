@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       setError('이메일과 비밀번호를 모두 입력해주세요.');
       return;
@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
+    <Container component="main" maxWidth="xs">
       <Box
         sx={{
           marginTop: 8,
@@ -125,17 +125,23 @@ const LoginPage: React.FC = () => {
               )}
             </Button>
             <Box textAlign="center">
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ mt: 2 }}>
                 계정이 없으신가요?{' '}
-                <Link 
-                  to="/signup" 
-                  style={{ 
-                    color: '#1976d2', 
-                    textDecoration: 'none',
-                    fontWeight: 'bold'
+                <Link
+                  to="/signup"
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'none'
                   }}
                 >
-                  회원가입
+                  <Typography
+                    component="span"
+                    variant="subtitle2"
+                    color="primary"
+                    sx={{ fontWeight: 'bold' }}
+                  >
+                    회원가입
+                  </Typography>
                 </Link>
               </Typography>
             </Box>
