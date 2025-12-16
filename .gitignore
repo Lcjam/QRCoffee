@@ -68,3 +68,6 @@ SETUP_GUIDE.md
 # SQL 파일 제외 (database_schema.sql만 포함)
 *.sql
 !database_schema.sql
+
+# 노션용 문서 (커밋 제외)
+docs/notion-*.md
