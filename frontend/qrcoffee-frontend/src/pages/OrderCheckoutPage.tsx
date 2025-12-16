@@ -70,11 +70,16 @@ const OrderCheckoutPage: React.FC = () => {
         customerPhone
       };
 
-      const order = await orderService.createOrder(orderRequest);
-
-      // 주문 완료 페이지로 이동
-      navigate('/order/complete', {
-        state: { order }
+      // 결제 페이지로 이동 (결제 후 주문 생성)
+      navigate('/payment', {
+        state: {
+          seat,
+          cart,
+          totalPrice,
+          customerName,
+          customerPhone,
+          customerRequest: customerRequest || undefined
+        }
       });
     } catch (err: any) {
       setError(err.message || '주문 생성에 실패했습니다.');
