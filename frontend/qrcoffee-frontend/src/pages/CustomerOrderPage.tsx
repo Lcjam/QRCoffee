@@ -40,7 +40,7 @@ import { Seat } from '../types/seat';
 const CustomerOrderPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const qrCode = searchParams.get('seat') || searchParams.get('qr');
   const [seat, setSeat] = useState<Seat | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -58,16 +58,16 @@ const CustomerOrderPage: React.FC = () => {
       return;
     }
 
-    loadSeatAndMenus();
+    loadSeatAndMenus(qrCode);
   }, [qrCode]);
 
-  const loadSeatAndMenus = async () => {
+  const loadSeatAndMenus = async (code: string) => {
     try {
       setLoading(true);
       setError('');
 
       // QR코드로 좌석 정보 조회
-      const seatData = await publicSeatService.getSeatByQRCode(qrCode);
+      const seatData = await publicSeatService.getSeatByQRCode(code);
       setSeat(seatData);
 
       // 매장의 메뉴 목록 조회
@@ -98,7 +98,7 @@ const CustomerOrderPage: React.FC = () => {
 
   const addToCart = (menu: Menu) => {
     const existingItem = cart.find(item => item.menuId === menu.id);
-    
+
     if (existingItem) {
       setCart(cart.map(item =>
         item.menuId === menu.id
@@ -284,7 +284,7 @@ const CustomerOrderPage: React.FC = () => {
             장바구니 ({cart.length}개)
           </Typography>
           <Divider sx={{ my: 2 }} />
-          
+
           {cart.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography variant="body1" color="text.secondary">
@@ -327,9 +327,9 @@ const CustomerOrderPage: React.FC = () => {
                   </ListItem>
                 ))}
               </List>
-              
+
               <Divider sx={{ my: 2 }} />
-              
+
               <Paper sx={{ p: 2, mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Typography variant="h6">총 금액</Typography>
