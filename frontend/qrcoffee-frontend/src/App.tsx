@@ -17,6 +17,9 @@ import OrderCheckoutPage from './pages/OrderCheckoutPage';
 import OrderCompletePage from './pages/OrderCompletePage';
 import OrderStatusPage from './pages/OrderStatusPage';
 import OrderManagePage from './pages/OrderManagePage';
+import PaymentPage from './pages/PaymentPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentFailPage from './pages/PaymentFailPage';
 
 import theme from './theme';
 
@@ -95,6 +98,9 @@ function App() {
             {/* 고객용 주문 페이지 (공개) */}
             <Route path="/order" element={<CustomerOrderPage />} />
             <Route path="/order/checkout" element={<OrderCheckoutPage />} />
+            <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/payment/fail" element={<PaymentFailPage />} />
             <Route path="/order/complete" element={<OrderCompletePage />} />
             <Route path="/order/status/:orderId" element={<OrderStatusPage />} />
 
