@@ -50,6 +50,7 @@ const CustomerOrderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [customerRequest, setCustomerRequest] = useState('');
 
   useEffect(() => {
     if (!qrCode) {
@@ -146,12 +147,15 @@ const CustomerOrderPage: React.FC = () => {
       return;
     }
 
-    // 주문 페이지로 이동 (다음 단계에서 구현)
-    navigate('/order/checkout', {
+    setError('');
+
+    // 결제 페이지로 바로 이동
+    navigate('/payment', {
       state: {
         seat,
         cart,
-        totalPrice: getTotalPrice()
+        totalPrice: getTotalPrice(),
+        customerRequest: customerRequest.trim() || undefined
       }
     });
   };
@@ -329,6 +333,26 @@ const CustomerOrderPage: React.FC = () => {
               </List>
 
               <Divider sx={{ my: 2 }} />
+
+              {/* 요청사항 입력 */}
+              <Paper sx={{ p: 2, mb: 2 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="요청사항 (선택)"
+                  value={customerRequest}
+                  onChange={(e) => setCustomerRequest(e.target.value)}
+                  multiline
+                  rows={2}
+                  placeholder="예: 얼음 적게, 뜨거운 물 추가 등"
+                />
+              </Paper>
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
 
               <Paper sx={{ p: 2, mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>

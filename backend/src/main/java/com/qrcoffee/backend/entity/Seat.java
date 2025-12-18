@@ -35,12 +35,15 @@ public class Seat {
     private String qrCode; // QR코드 UUID
     
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private Boolean isActive = true; // 좌석 사용 가능 여부
     
     @Column(name = "is_occupied", nullable = false)
+    @Builder.Default
     private Boolean isOccupied = false; // 현재 사용 중 여부
     
     @Column(name = "max_capacity", nullable = false)
+    @Builder.Default
     private Integer maxCapacity = 4; // 최대 수용 인원
     
     @Column(name = "qr_code_image_url", length = 500)
@@ -72,6 +75,10 @@ public class Seat {
     
     // 편의 메서드들
     public boolean isAvailable() {
+        // null 체크 추가: isActive와 isOccupied가 모두 null이 아닐 때만 확인
+        if (isActive == null || isOccupied == null) {
+            return false;
+        }
         return isActive && !isOccupied;
     }
     

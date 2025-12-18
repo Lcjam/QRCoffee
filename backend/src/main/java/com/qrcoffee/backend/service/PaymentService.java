@@ -142,8 +142,13 @@ public class PaymentService {
         metadata.put("cartItems", request.getOrderItems());
         metadata.put("seatId", request.getSeatId());
         metadata.put("storeId", request.getStoreId());
-        metadata.put("customerName", request.getCustomerName());
-        metadata.put("customerPhone", request.getCustomerPhone());
+        // 고객 정보는 선택사항이므로 null이 아니고 빈 문자열이 아닐 때만 추가
+        if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
+            metadata.put("customerName", request.getCustomerName().trim());
+        }
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
+            metadata.put("customerPhone", request.getCustomerPhone().trim());
+        }
         metadata.put("userId", userId);
         return metadata;
     }
@@ -445,9 +450,10 @@ public class PaymentService {
                 .orderItems(orderItems)
                 .seatId(extractLongFromMetadata(metadata, "seatId"))
                 // totalAmount는 OrderService에서 주문 항목으로부터 자동 계산됨
-                .customerName((String) metadata.get("customerName"))
-                .customerPhone((String) metadata.get("customerPhone"))
-                .customerRequest((String) metadata.getOrDefault("customerRequest", ""))
+                // 고객 정보는 선택사항이므로 null일 수 있음
+                .customerName(metadata.containsKey("customerName") ? (String) metadata.get("customerName") : null)
+                .customerPhone(metadata.containsKey("customerPhone") ? (String) metadata.get("customerPhone") : null)
+                .customerRequest(metadata.containsKey("customerRequest") ? (String) metadata.get("customerRequest") : null)
                 .build();
     }
     

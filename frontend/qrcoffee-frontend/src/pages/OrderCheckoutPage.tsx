@@ -30,8 +30,6 @@ const OrderCheckoutPage: React.FC = () => {
     totalPrice: number;
   };
 
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
   const [customerRequest, setCustomerRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -43,32 +41,9 @@ const OrderCheckoutPage: React.FC = () => {
   }, [seat, cart, navigate]);
 
   const handleOrder = async () => {
-    if (!customerName.trim()) {
-      setError('이름을 입력해주세요.');
-      return;
-    }
-
-    if (!customerPhone.trim()) {
-      setError('전화번호를 입력해주세요.');
-      return;
-    }
-
     try {
       setLoading(true);
       setError('');
-
-      const orderRequest = {
-        storeId: seat.storeId,
-        seatId: seat.id,
-        orderItems: cart.map(item => ({
-          menuId: item.menuId,
-          quantity: item.quantity,
-          options: item.options
-        })),
-        customerRequest: customerRequest || undefined,
-        customerName,
-        customerPhone
-      };
 
       // 결제 페이지로 이동 (결제 후 주문 생성)
       navigate('/payment', {
@@ -76,8 +51,6 @@ const OrderCheckoutPage: React.FC = () => {
           seat,
           cart,
           totalPrice,
-          customerName,
-          customerPhone,
           customerRequest: customerRequest || undefined
         }
       });
@@ -142,37 +115,18 @@ const OrderCheckoutPage: React.FC = () => {
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          고객 정보
+          요청사항 (선택)
         </Typography>
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="이름"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <TextField
-            fullWidth
-            label="전화번호"
-            value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
-            required
-            disabled={loading}
-            placeholder="010-1234-5678"
-          />
-          <TextField
-            fullWidth
-            label="요청사항 (선택)"
-            value={customerRequest}
-            onChange={(e) => setCustomerRequest(e.target.value)}
-            multiline
-            rows={3}
-            disabled={loading}
-            placeholder="예: 얼음 적게, 뜨거운 물 추가 등"
-          />
-        </Stack>
+        <TextField
+          fullWidth
+          label="요청사항"
+          value={customerRequest}
+          onChange={(e) => setCustomerRequest(e.target.value)}
+          multiline
+          rows={3}
+          disabled={loading}
+          placeholder="예: 얼음 적게, 뜨거운 물 추가 등"
+        />
       </Paper>
 
       <Stack direction="row" spacing={2}>
@@ -189,7 +143,7 @@ const OrderCheckoutPage: React.FC = () => {
           variant="contained"
           fullWidth
           onClick={handleOrder}
-          disabled={loading || !customerName.trim() || !customerPhone.trim()}
+          disabled={loading}
         >
           {loading ? <CircularProgress size={24} /> : '주문하기'}
         </Button>
