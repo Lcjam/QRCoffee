@@ -27,7 +27,6 @@ public class UserService {
     // 상수 정의
     private static final String LOGIN_SUCCESS_MESSAGE = "로그인 성공";
     private static final String SIGNUP_SUCCESS_MESSAGE = "회원가입 완료";
-    private static final String STAFF_ACCOUNT_SUCCESS_MESSAGE = "직원 계정 생성 완료";
     private static final String USER_STATUS_CHANGE_MESSAGE = "사용자 상태 변경";
     
     private final UserRepository userRepository;
@@ -190,46 +189,6 @@ public class UserService {
         log.info("{}: {} -> {}", USER_STATUS_CHANGE_MESSAGE, user.getEmail(), user.getIsActive() ? "활성화" : "비활성화");
         
         return UserResponse.from(updatedUser);
-    }
-    
-    /**
-     * 직원 계정 생성
-     */
-    @Transactional
-    public UserResponse createStaffAccount(SignupRequest request, Long masterUserId) {
-        log.info("직원 계정 생성 시도: {} by masterUserId={}", request.getEmail(), masterUserId);
-        
-        // 마스터 사용자 조회 및 권한 검증
-        User masterUser = findUserById(masterUserId);
-        ValidationUtils.validateMasterRole(masterUser);
-        
-        // 이메일 중복 검증
-        ValidationUtils.validateEmailNotDuplicate(
-                request.getEmail(), 
-                userRepository.existsByEmail(request.getEmail())
-        );
-        
-        // 직원 계정 생성
-        User staffUser = createStaffUser(request, masterUser.getStoreId());
-        User savedUser = userRepository.save(staffUser);
-        
-        log.info("{}: {} (ID: {})", STAFF_ACCOUNT_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
-        
-        return UserResponse.from(savedUser);
-    }
-    
-    /**
-     * 직원 사용자 생성
-     */
-    private User createStaffUser(SignupRequest request, Long storeId) {
-        return User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName())
-                .phone(request.getPhone())
-                .role(User.Role.SUB)
-                .storeId(storeId)
-                .build();
     }
     
     /**

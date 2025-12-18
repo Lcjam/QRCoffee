@@ -30,7 +30,7 @@ QR코드 기반 무인 카페 주문 시스템
 - **Axios** - HTTP 클라이언트
 - **React Router** - 라우팅
 
-### 결제 시스템 (예정)
+### 결제 시스템
 - **토스페이먼츠 API** - 온라인 결제
 
 ## 🚀 빠른 시작
@@ -185,12 +185,18 @@ QRCoffee/
 - [x] 주문 상태 확인 페이지
 - [x] 관리자용 주문 관리 페이지
 
-### 🚧 진행 중 / 예정
-
 #### 7단계: 결제 시스템
-- [ ] 토스페이먼츠 API 연동
-- [ ] 결제 페이지 구현
-- [ ] 결제 완료/실패 처리
+- [x] 토스페이먼츠 API 연동
+- [x] 결제 준비 API (장바구니 → 결제 준비)
+- [x] 결제 승인 API (토스페이먼츠 결제 승인)
+- [x] 결제 조회 API (paymentKey, orderId로 조회)
+- [x] 결제 페이지 구현 (토스페이먼츠 위젯 연동)
+- [x] 결제 완료 페이지
+- [x] 결제 실패 페이지
+- [x] 결제 서비스 테스트 코드 (TDD)
+- [x] 결제 페이지 테스트 코드 (TDD)
+
+### 🚧 진행 중 / 예정
 
 #### 8단계: 실시간 알림 시스템
 - [ ] WebSocket 설정 및 핸들러 구현
@@ -219,7 +225,7 @@ QRCoffee/
 - `menus` - 메뉴 정보
 - `orders` - 주문 정보
 - `order_items` - 주문 상세 항목
-- `payments` - 결제 정보 (예정)
+- `payments` - 결제 정보
 - `notifications` - 알림 정보 (예정)
 
 전체 스키마는 `database_schema.sql` 파일을 참고하세요.
@@ -257,6 +263,12 @@ QRCoffee/
 - `GET /api/orders/store` - 관리자용 주문 목록
 - `PUT /api/orders/{id}/status` - 주문 상태 변경
 
+### 결제
+- `POST /api/payments/prepare` - 결제 준비 (장바구니 → 결제 준비)
+- `POST /api/payments/confirm` - 결제 승인 (토스페이먼츠 결제 승인)
+- `GET /api/payments/{paymentKey}` - 결제 조회 (paymentKey로)
+- `GET /api/payments/order/{orderId}` - 결제 조회 (orderId로)
+
 ## 📚 문서
 
 - `SETUP_GUIDE.md` - 상세한 설정 및 실행 가이드
@@ -272,4 +284,4 @@ QRCoffee/
 
 **개발자**: Lcjam  
 **시작일**: 2024년  
-**현재 단계**: 6단계 완료 (주문 시스템)
+**현재 단계**: 7단계 완료 (결제 시스템)

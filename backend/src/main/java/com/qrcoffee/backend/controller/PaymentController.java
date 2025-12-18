@@ -1,8 +1,10 @@
 package com.qrcoffee.backend.controller;
 
 import com.qrcoffee.backend.common.ApiResponse;
+import com.qrcoffee.backend.common.BaseController;
 import com.qrcoffee.backend.dto.CartPaymentRequest;
 import com.qrcoffee.backend.dto.PaymentConfirmRequest;
+import com.qrcoffee.backend.dto.PaymentCancelRequest;
 import com.qrcoffee.backend.dto.PaymentResponse;
 import com.qrcoffee.backend.service.PaymentService;
 import jakarta.validation.Valid;
@@ -15,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
 @Slf4j
-public class PaymentController {
+public class PaymentController extends BaseController {
     
     private final PaymentService paymentService;
     
@@ -31,7 +33,7 @@ public class PaymentController {
         // 고객용 결제이므로 사용자 인증 불필요
         PaymentResponse paymentResponse = paymentService.prepareCartPayment(request, null);
         
-        return ResponseEntity.ok(ApiResponse.success("결제 준비가 완료되었습니다.", paymentResponse));
+        return success("결제 준비가 완료되었습니다.", paymentResponse);
     }
     
     /**
@@ -45,7 +47,7 @@ public class PaymentController {
         
         PaymentResponse paymentResponse = paymentService.confirmPayment(request);
         
-        return ResponseEntity.ok(ApiResponse.success("결제가 완료되었습니다.", paymentResponse));
+        return success("결제가 완료되었습니다.", paymentResponse);
     }
     
     /**
@@ -57,7 +59,7 @@ public class PaymentController {
         
         PaymentResponse paymentResponse = paymentService.getPaymentByKey(paymentKey);
         
-        return ResponseEntity.ok(ApiResponse.success("결제 정보를 조회했습니다.", paymentResponse));
+        return success("결제 정보를 조회했습니다.", paymentResponse);
     }
     
     /**
@@ -69,7 +71,21 @@ public class PaymentController {
         
         PaymentResponse paymentResponse = paymentService.getPaymentByOrderId(orderId);
         
-        return ResponseEntity.ok(ApiResponse.success("결제 정보를 조회했습니다.", paymentResponse));
+        return success("결제 정보를 조회했습니다.", paymentResponse);
+    }
+    
+    /**
+     * 결제 취소
+     */
+    @PostMapping("/cancel")
+    public ResponseEntity<ApiResponse<PaymentResponse>> cancelPayment(
+            @Valid @RequestBody PaymentCancelRequest request) {
+        log.info("결제 취소 요청: paymentKey={}, cancelReason={}", 
+                request.getPaymentKey(), request.getCancelReason());
+        
+        PaymentResponse paymentResponse = paymentService.cancelPayment(request);
+        
+        return success("결제가 취소되었습니다.", paymentResponse);
     }
 }
 

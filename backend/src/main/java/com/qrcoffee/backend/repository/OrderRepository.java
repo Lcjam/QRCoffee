@@ -43,10 +43,5 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * 매장별 특정 상태 주문 개수
      */
     long countByStoreIdAndStatus(Long storeId, Order.OrderStatus status);
-    
-    /**
-     * 좌석별 주문 목록 조회
-     */
-    List<Order> findBySeatIdOrderByCreatedAtDesc(Long seatId);
 }
 

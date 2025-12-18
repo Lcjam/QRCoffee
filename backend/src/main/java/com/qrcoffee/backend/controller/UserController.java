@@ -1,11 +1,11 @@
 package com.qrcoffee.backend.controller;
 
 import com.qrcoffee.backend.common.ApiResponse;
+import com.qrcoffee.backend.common.BaseController;
 import com.qrcoffee.backend.dto.SignupRequest;
 import com.qrcoffee.backend.dto.SubAccountRequest;
 import com.qrcoffee.backend.dto.UserResponse;
 import com.qrcoffee.backend.service.UserService;
-import com.qrcoffee.backend.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +20,9 @@ import java.util.List;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
-public class UserController {
+public class UserController extends BaseController {
     
     private final UserService userService;
-    private final JwtUtil jwtUtil;
     
     /**
      * 매장별 사용자 목록 조회 (마스터 계정만)
@@ -31,13 +30,13 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('MASTER')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByStore(HttpServletRequest request) {
-        Long storeId = jwtUtil.getStoreIdFromRequest(request);
+        Long storeId = getStoreId(request);
         
         log.info("매장 사용자 목록 조회: storeId={}", storeId);
         
         List<UserResponse> users = userService.getUsersByStore(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("사용자 목록을 조회했습니다.", users));
+        return success("사용자 목록을 조회했습니다.", users);
     }
     
     /**
@@ -46,13 +45,13 @@ public class UserController {
     @GetMapping("/sub-accounts")
     @PreAuthorize("hasRole('MASTER')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getSubAccounts(HttpServletRequest request) {
-        Long userId = jwtUtil.getUserIdFromRequest(request);
+        Long userId = getUserId(request);
         
         log.info("서브계정 목록 조회: masterUserId={}", userId);
         
         List<UserResponse> subAccounts = userService.getSubAccounts(userId);
         
-        return ResponseEntity.ok(ApiResponse.success("서브계정 목록을 조회했습니다.", subAccounts));
+        return success("서브계정 목록을 조회했습니다.", subAccounts);
     }
     
     /**
@@ -63,8 +62,8 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> createSubAccount(
             @Valid @RequestBody SubAccountRequest request,
             HttpServletRequest httpRequest) {
-        Long masterUserId = jwtUtil.getUserIdFromRequest(httpRequest);
-        Long storeId = jwtUtil.getStoreIdFromRequest(httpRequest);
+        Long masterUserId = getUserId(httpRequest);
+        Long storeId = getStoreId(httpRequest);
         
         log.info("서브계정 생성 요청: masterUserId={}, storeId={}, email={}", masterUserId, storeId, request.getEmail());
         
@@ -72,7 +71,7 @@ public class UserController {
         SignupRequest signupRequest = request.toSignupRequest(storeId, masterUserId);
         UserResponse subAccount = userService.createSubAccount(signupRequest, masterUserId);
         
-        return ResponseEntity.ok(ApiResponse.success("서브계정이 생성되었습니다.", subAccount));
+        return success("서브계정이 생성되었습니다.", subAccount);
     }
     
     /**
@@ -83,13 +82,13 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(
             @PathVariable Long userId,
             HttpServletRequest request) {
-        Long requesterId = jwtUtil.getUserIdFromRequest(request);
+        Long requesterId = getUserId(request);
         
         log.info("사용자 상태 변경: userId={}, requesterId={}", userId, requesterId);
         
         UserResponse user = userService.toggleUserStatus(userId, requesterId);
         
-        return ResponseEntity.ok(ApiResponse.success("사용자 상태가 변경되었습니다.", user));
+        return success("사용자 상태가 변경되었습니다.", user);
     }
     
     /**
@@ -102,6 +101,6 @@ public class UserController {
         
         UserResponse user = userService.getUserById(userId);
         
-        return ResponseEntity.ok(ApiResponse.success("사용자 정보를 조회했습니다.", user));
+        return success("사용자 정보를 조회했습니다.", user);
     }
 } 
