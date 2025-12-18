@@ -53,9 +53,9 @@ public class SeatResponse {
     }
     
     private static String getStatusString(Seat seat) {
-        if (!seat.getIsActive()) {
+        if (seat.getIsActive() == null || !seat.getIsActive()) {
             return "비활성";
-        } else if (seat.getIsOccupied()) {
+        } else if (seat.getIsOccupied() != null && seat.getIsOccupied()) {
             return "사용중";
         } else {
             return "사용가능";

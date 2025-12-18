@@ -66,7 +66,8 @@ public class SecurityConfig {
                     "/actuator/**",
                     "/api/qr/**",  // QR코드 스캔용
                     "/api/public/seats/**",  // 퍼블릭 좌석 API
-                    "/api/public/menus/**",  // 고객용 메뉴 조회
+                    "/api/public/stores/**", // 고객용 매장/메뉴 조회 API
+                    "/api/public/menus/**",  // 고객용 메뉴 조회 (하위 호환성)
                     "/api/payments/**"       // 고객용 결제 API
                 ).permitAll()
                 

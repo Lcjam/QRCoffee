@@ -106,10 +106,10 @@ public class SeatService {
         Seat seat = buildNewSeat(storeId, request);
         Seat savedSeat = seatRepository.save(seat);
         
-        // QR코드 생성 로그
-        qrCodeUtil.logQRCodeGeneration(seat.getQrCode(), seat.getId(), seat.getSeatNumber());
+        // QR코드 생성 로그 (저장된 좌석의 ID 사용)
+        qrCodeUtil.logQRCodeGeneration(savedSeat.getQrCode(), savedSeat.getId(), savedSeat.getSeatNumber());
         
-        log.info("{}: seatId={}, qrCode={}", SEAT_CREATED_MESSAGE, savedSeat.getId(), seat.getQrCode());
+        log.info("{}: seatId={}, qrCode={}", SEAT_CREATED_MESSAGE, savedSeat.getId(), savedSeat.getQrCode());
         return SeatResponse.from(savedSeat);
     }
     
@@ -250,7 +250,14 @@ public class SeatService {
      */
     private Seat buildNewSeat(Long storeId, SeatRequest request) {
         String qrCode = generateUniqueQRCode();
-        String qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(qrCode);
+        String qrCodeImageUrl = null;
+        
+        try {
+            qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(qrCode);
+        } catch (Exception e) {
+            log.warn("QR코드 이미지 URL 생성 실패: qrCode={}, error={}", qrCode, e.getMessage());
+            // QR코드 이미지 URL 생성 실패해도 좌석 생성은 계속 진행
+        }
         
         return Seat.builder()
                 .storeId(storeId)
@@ -258,6 +265,7 @@ public class SeatService {
                 .description(request.getDescription())
                 .qrCode(qrCode)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                .isOccupied(false) // 새 좌석은 항상 비점유 상태로 생성
                 .maxCapacity(request.getMaxCapacity() != null ? request.getMaxCapacity() : DEFAULT_MAX_CAPACITY)
                 .qrCodeImageUrl(qrCodeImageUrl)
                 .qrGeneratedAt(LocalDateTime.now())
@@ -301,7 +309,14 @@ public class SeatService {
      */
     private void regenerateQRCodeForSeat(Seat seat) {
         String newQrCode = generateUniqueQRCode();
-        String newQrCodeImageUrl = qrCodeUtil.generateQRCodeImage(newQrCode);
+        String newQrCodeImageUrl = null;
+        
+        try {
+            newQrCodeImageUrl = qrCodeUtil.generateQRCodeImage(newQrCode);
+        } catch (Exception e) {
+            log.warn("QR코드 이미지 URL 생성 실패: qrCode={}, error={}", newQrCode, e.getMessage());
+            // QR코드 이미지 URL 생성 실패해도 QR코드 재생성은 계속 진행
+        }
         
         seat.setQrCode(newQrCode);
         seat.setQrCodeImageUrl(newQrCodeImageUrl);

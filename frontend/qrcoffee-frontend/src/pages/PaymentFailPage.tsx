@@ -15,8 +15,10 @@ const PaymentFailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  const errorCode = searchParams.get('errorCode');
-  const errorMessage = searchParams.get('errorMessage');
+  // 토스페이먼츠 결제창이 전달하는 파라미터: code, message, orderId
+  const errorCode = searchParams.get('code') || searchParams.get('errorCode');
+  const errorMessage = searchParams.get('message') || searchParams.get('errorMessage');
+  const orderId = searchParams.get('orderId');
 
   const getErrorMessage = () => {
     if (errorMessage) {
@@ -24,8 +26,12 @@ const PaymentFailPage: React.FC = () => {
     }
     
     switch (errorCode) {
+      case 'PAY_PROCESS_CANCELED':
       case 'USER_CANCEL':
         return '결제가 취소되었습니다.';
+      case 'PAY_PROCESS_ABORTED':
+        return '결제가 중단되었습니다.';
+      case 'REJECT_CARD_COMPANY':
       case 'INVALID_CARD':
         return '유효하지 않은 카드 정보입니다.';
       case 'INSUFFICIENT_FUNDS':

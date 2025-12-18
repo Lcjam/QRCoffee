@@ -3,8 +3,8 @@
 export interface CartPaymentRequest {
   totalAmount: number;
   orderName: string;
-  customerName: string;
-  customerPhone: string;
+  customerName: string; // 백엔드 호환성을 위해 유지하되 빈 문자열 전달
+  customerPhone: string; // 백엔드 호환성을 위해 유지하되 빈 문자열 전달
   storeId: number;
   seatId: number;
   orderItems: OrderItemRequest[];

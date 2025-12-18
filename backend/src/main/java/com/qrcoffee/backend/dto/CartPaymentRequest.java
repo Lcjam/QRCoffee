@@ -24,10 +24,9 @@ public class CartPaymentRequest {
     @NotBlank(message = "주문명은 필수입니다.")
     private String orderName;
     
-    @NotNull(message = "고객 이름은 필수입니다.")
+    // 고객 정보는 선택사항 (토스페이먼츠 API에서도 선택사항)
     private String customerName;
     
-    @NotNull(message = "고객 전화번호는 필수입니다.")
     private String customerPhone;
     
     @NotNull(message = "매장 ID는 필수입니다.")
