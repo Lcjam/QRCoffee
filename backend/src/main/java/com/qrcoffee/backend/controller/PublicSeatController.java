@@ -4,6 +4,7 @@ import com.qrcoffee.backend.common.ApiResponse;
 import com.qrcoffee.backend.dto.SeatResponse;
 import com.qrcoffee.backend.service.SeatService;
 import com.qrcoffee.backend.util.QRCodeUtil;
+import com.qrcoffee.backend.util.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class PublicSeatController {
         
         // QR코드 스캔 로그 기록
         String userAgent = request.getHeader("User-Agent");
-        String ipAddress = getClientIpAddress(request);
+        String ipAddress = RequestUtils.getClientIpAddress(request);
         qrCodeUtil.logQRCodeScan(qrCode, userAgent, ipAddress);
         
         log.info("QR코드 접근: qrCode={}, IP={}", qrCode, ipAddress);
@@ -72,7 +73,7 @@ public class PublicSeatController {
         
         // QR코드 스캔 로그 기록
         String userAgent = request.getHeader("User-Agent");
-        String ipAddress = getClientIpAddress(request);
+        String ipAddress = RequestUtils.getClientIpAddress(request);
         qrCodeUtil.logQRCodeScan(qrCode, userAgent, ipAddress);
         
         SeatResponse seat = seatService.getActiveSeatByQRCode(qrCode);
@@ -116,22 +117,5 @@ public class PublicSeatController {
         
         List<SeatResponse> activeSeats = seatService.getActiveSeats(storeId);
         return ResponseEntity.ok(ApiResponse.success("활성 좌석 목록을 조회했습니다.", activeSeats));
-    }
-    
-    /**
-     * 클라이언트 IP 주소 추출
-     */
-    private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty() && !"unknown".equalsIgnoreCase(xForwardedFor)) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-        
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty() && !"unknown".equalsIgnoreCase(xRealIp)) {
-            return xRealIp;
-        }
-        
-        return request.getRemoteAddr();
     }
 } 

@@ -1,6 +1,7 @@
 package com.qrcoffee.backend.controller;
 
 import com.qrcoffee.backend.common.ApiResponse;
+import com.qrcoffee.backend.common.BaseController;
 import com.qrcoffee.backend.dto.MenuRequest;
 import com.qrcoffee.backend.dto.MenuResponse;
 import com.qrcoffee.backend.service.MenuService;
@@ -18,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/menus")
 @RequiredArgsConstructor
 @Slf4j
-public class MenuController {
+public class MenuController extends BaseController {
     
     private final MenuService menuService;
     
@@ -27,13 +28,13 @@ public class MenuController {
      */
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<MenuResponse>>> getActiveMenus(HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+        Long storeId = getStoreId(request);
         
         log.info("활성 메뉴 목록 조회: storeId={}", storeId);
         
         List<MenuResponse> menus = menuService.getActiveMenus(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("활성 메뉴 목록을 조회했습니다.", menus));
+        return success("활성 메뉴 목록을 조회했습니다.", menus);
     }
     
     /**
@@ -42,13 +43,13 @@ public class MenuController {
     @GetMapping
     @PreAuthorize("hasRole('MASTER') or hasRole('SUB')")
     public ResponseEntity<ApiResponse<List<MenuResponse>>> getAllMenus(HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+        Long storeId = getStoreId(request);
         
         log.info("모든 메뉴 목록 조회: storeId={}", storeId);
         
         List<MenuResponse> menus = menuService.getAllMenus(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴 목록을 조회했습니다.", menus));
+        return success("메뉴 목록을 조회했습니다.", menus);
     }
     
     /**
@@ -60,7 +61,7 @@ public class MenuController {
         
         List<MenuResponse> menus = menuService.getMenusByCategory(categoryId);
         
-        return ResponseEntity.ok(ApiResponse.success("카테고리별 메뉴 목록을 조회했습니다.", menus));
+        return success("카테고리별 메뉴 목록을 조회했습니다.", menus);
     }
     
     /**
@@ -69,13 +70,13 @@ public class MenuController {
     @GetMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuResponse>> getMenuById(@PathVariable Long menuId,
                                                                 HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+        Long storeId = getStoreId(request);
         
         log.info("메뉴 상세 조회: menuId={}, storeId={}", menuId, storeId);
         
         MenuResponse menu = menuService.getMenuById(menuId, storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴 정보를 조회했습니다.", menu));
+        return success("메뉴 정보를 조회했습니다.", menu);
     }
     
     /**
@@ -85,13 +86,13 @@ public class MenuController {
     @PreAuthorize("hasRole('MASTER')")
     public ResponseEntity<ApiResponse<MenuResponse>> createMenu(@Valid @RequestBody MenuRequest request,
                                                                HttpServletRequest httpRequest) {
-        Long storeId = (Long) httpRequest.getAttribute("storeId");
+        Long storeId = getStoreId(httpRequest);
         
         log.info("메뉴 생성 요청: storeId={}, name={}", storeId, request.getName());
         
         MenuResponse menu = menuService.createMenu(storeId, request);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 생성되었습니다.", menu));
+        return success("메뉴가 생성되었습니다.", menu);
     }
     
     /**
@@ -102,13 +103,13 @@ public class MenuController {
     public ResponseEntity<ApiResponse<MenuResponse>> updateMenu(@PathVariable Long menuId,
                                                                @Valid @RequestBody MenuRequest request,
                                                                HttpServletRequest httpRequest) {
-        Long storeId = (Long) httpRequest.getAttribute("storeId");
+        Long storeId = getStoreId(httpRequest);
         
         log.info("메뉴 수정 요청: menuId={}, storeId={}, name={}", menuId, storeId, request.getName());
         
         MenuResponse menu = menuService.updateMenu(menuId, storeId, request);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 수정되었습니다.", menu));
+        return success("메뉴가 수정되었습니다.", menu);
     }
     
     /**
@@ -118,13 +119,13 @@ public class MenuController {
     @PreAuthorize("hasRole('MASTER')")
     public ResponseEntity<ApiResponse<Void>> deleteMenu(@PathVariable Long menuId,
                                                        HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+        Long storeId = getStoreId(request);
         
         log.info("메뉴 삭제 요청: menuId={}, storeId={}", menuId, storeId);
         
         menuService.deleteMenu(menuId, storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴가 삭제되었습니다.", null));
+        return success("메뉴가 삭제되었습니다.");
     }
     
     /**
@@ -133,37 +134,13 @@ public class MenuController {
     @PutMapping("/{menuId}/status")
     @PreAuthorize("hasRole('MASTER') or hasRole('SUB')")
     public ResponseEntity<ApiResponse<MenuResponse>> toggleMenuAvailability(@PathVariable Long menuId,
-                                                                           HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+                                                                       HttpServletRequest request) {
+        Long storeId = getStoreId(request);
         
         log.info("메뉴 상태 변경 요청: menuId={}, storeId={}", menuId, storeId);
         
         MenuResponse menu = menuService.toggleMenuAvailability(menuId, storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("메뉴 상태가 변경되었습니다.", menu));
+        return success("메뉴 상태가 변경되었습니다.", menu);
     }
 }
-
-/**
- * 고객용 메뉴 조회 API (별도 컨트롤러 또는 퍼블릭 엔드포인트)
- */
-@RestController
-@RequestMapping("/api/public/stores")
-@RequiredArgsConstructor
-@Slf4j
-class PublicMenuController {
-    
-    private final MenuService menuService;
-    
-    /**
-     * 고객용 메뉴 목록 조회 (인증 불필요)
-     */
-    @GetMapping("/{storeId}/menus")
-    public ResponseEntity<ApiResponse<List<MenuResponse>>> getMenusForCustomer(@PathVariable Long storeId) {
-        log.info("고객용 메뉴 목록 조회: storeId={}", storeId);
-        
-        List<MenuResponse> menus = menuService.getMenusForCustomer(storeId);
-        
-        return ResponseEntity.ok(ApiResponse.success("메뉴 목록을 조회했습니다.", menus));
-    }
-} 

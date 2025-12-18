@@ -29,6 +29,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -478,6 +479,125 @@ class PaymentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("결제 정보를 찾을 수 없습니다");
 
+        verify(paymentRepository, times(1)).findByOrderIdToss(orderIdToss);
+    }
+
+    @Test
+    @DisplayName("결제 취소 - 성공")
+    void cancelPayment_Success() throws Exception {
+        // given
+        com.qrcoffee.backend.dto.PaymentCancelRequest cancelRequest = com.qrcoffee.backend.dto.PaymentCancelRequest.builder()
+                .paymentKey("payment_key_123")
+                .cancelReason("고객 요청")
+                .build();
+
+        Payment canceledPayment = Payment.builder()
+                .id(1L)
+                .orderId(1L)
+                .orderIdToss("order_1234567890_0")
+                .paymentKey("payment_key_123")
+                .orderName("아메리카노 외 1건")
+                .totalAmount(new BigDecimal("10000"))
+                .balanceAmount(new BigDecimal("10000"))
+                .status("DONE")
+                .method("카드")
+                .approvedAt(LocalDateTime.now())
+                .build();
+
+        when(paymentRepository.findByPaymentKey("payment_key_123"))
+                .thenReturn(Optional.of(canceledPayment));
+
+        when(tossPaymentsConfig.getSecretKey()).thenReturn("test_secret_key");
+
+        // 토스페이먼츠 API 응답 모킹
+        String tossResponseBody = "{\"paymentKey\":\"payment_key_123\",\"orderId\":\"order_1234567890_0\",\"status\":\"CANCELED\",\"cancelReason\":\"고객 요청\"}";
+        ResponseEntity<String> responseEntity = new ResponseEntity<>(tossResponseBody, HttpStatus.OK);
+
+        when(restTemplate.exchange(anyString(), any(), any(), eq(String.class)))
+                .thenReturn(responseEntity);
+
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // when
+        PaymentResponse result = paymentService.cancelPayment(cancelRequest);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("CANCELED");
+        assertThat(result.getPaymentKey()).isEqualTo("payment_key_123");
+        
+        verify(paymentRepository, times(1)).findByPaymentKey("payment_key_123");
+        verify(paymentRepository, times(1)).save(any(Payment.class));
+    }
+
+    @Test
+    @DisplayName("결제 취소 - 존재하지 않는 결제")
+    void cancelPayment_PaymentNotFound() {
+        // given
+        com.qrcoffee.backend.dto.PaymentCancelRequest cancelRequest = com.qrcoffee.backend.dto.PaymentCancelRequest.builder()
+                .paymentKey("invalid_payment_key")
+                .cancelReason("고객 요청")
+                .build();
+
+        when(paymentRepository.findByPaymentKey("invalid_payment_key"))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> paymentService.cancelPayment(cancelRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("결제 정보를 찾을 수 없습니다");
+    }
+
+    @Test
+    @DisplayName("결제 취소 - 이미 취소된 결제")
+    void cancelPayment_AlreadyCanceled() {
+        // given
+        Payment canceledPayment = Payment.builder()
+                .id(1L)
+                .orderId(1L)
+                .orderIdToss("order_1234567890_0")
+                .paymentKey("payment_key_123")
+                .status("CANCELED")
+                .totalAmount(new BigDecimal("10000"))
+                .build();
+
+        com.qrcoffee.backend.dto.PaymentCancelRequest cancelRequest = com.qrcoffee.backend.dto.PaymentCancelRequest.builder()
+                .paymentKey("payment_key_123")
+                .cancelReason("고객 요청")
+                .build();
+
+        when(paymentRepository.findByPaymentKey("payment_key_123"))
+                .thenReturn(Optional.of(canceledPayment));
+
+        // when & then
+        assertThatThrownBy(() -> paymentService.cancelPayment(cancelRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("이미 취소된 결제입니다");
+    }
+
+    @Test
+    @DisplayName("결제 이력 조회 - 주문 ID로 조회 성공")
+    void getPaymentHistory_ByOrderId_Success() {
+        // given
+        String orderIdToss = "order_1234567890_0";
+        Payment paymentHistory = Payment.builder()
+                .id(1L)
+                .orderId(1L)
+                .paymentKey("payment_key_1")
+                .orderIdToss(orderIdToss)
+                .totalAmount(new BigDecimal("10000"))
+                .status("DONE")
+                .build();
+
+        when(paymentRepository.findByOrderIdToss(orderIdToss))
+                .thenReturn(Optional.of(paymentHistory));
+
+        // when
+        PaymentResponse result = paymentService.getPaymentByOrderId(orderIdToss);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getOrderIdToss()).isEqualTo(orderIdToss);
         verify(paymentRepository, times(1)).findByOrderIdToss(orderIdToss);
     }
 }

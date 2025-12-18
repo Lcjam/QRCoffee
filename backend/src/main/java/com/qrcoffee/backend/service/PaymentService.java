@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qrcoffee.backend.config.TossPaymentsConfig;
 import com.qrcoffee.backend.dto.PaymentConfirmRequest;
+import com.qrcoffee.backend.dto.PaymentCancelRequest;
 import com.qrcoffee.backend.dto.PaymentResponse;
 import com.qrcoffee.backend.dto.CartPaymentRequest;
 import com.qrcoffee.backend.dto.OrderRequest;
@@ -628,5 +629,83 @@ public class PaymentService {
             log.error("토스페이먼츠 응답 처리 중 오류 발생: {}", e.getMessage(), e);
             throw new BusinessException("결제 응답 처리에 실패했습니다.");
         }
+    }
+    
+    /**
+     * 결제 취소
+     */
+    @Transactional
+    public PaymentResponse cancelPayment(PaymentCancelRequest request) {
+        log.info("결제 취소 요청: paymentKey={}, cancelReason={}", request.getPaymentKey(), request.getCancelReason());
+        
+        // 결제 정보 조회
+        Payment payment = paymentRepository.findByPaymentKey(request.getPaymentKey())
+                .orElseThrow(() -> new BusinessException("결제 정보를 찾을 수 없습니다."));
+        
+        // 이미 취소된 결제인지 확인
+        if ("CANCELED".equals(payment.getStatus()) || "PARTIAL_CANCELED".equals(payment.getStatus())) {
+            throw new BusinessException("이미 취소된 결제입니다.");
+        }
+        
+        // DONE 상태가 아니면 취소 불가
+        if (!"DONE".equals(payment.getStatus())) {
+            throw new BusinessException("결제 완료된 건만 취소할 수 있습니다.");
+        }
+        
+        try {
+            // 토스페이먼츠 결제 취소 API 호출
+            PaymentResponse cancelResponse = callTossPaymentCancelAPI(request, payment);
+            
+            // 결제 정보 업데이트
+            payment.setStatus(cancelResponse.getStatus());
+            payment.setCancelReason(request.getCancelReason());
+            payment.setBalanceAmount(BigDecimal.ZERO);
+            paymentRepository.save(payment);
+            
+            log.info("결제 취소 완료: paymentKey={}, status={}", request.getPaymentKey(), cancelResponse.getStatus());
+            
+            return convertToPaymentResponse(payment);
+            
+        } catch (Exception e) {
+            log.error("결제 취소 실패: {}", e.getMessage(), e);
+            throw new BusinessException("결제 취소에 실패했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 토스페이먼츠 결제 취소 API 호출
+     */
+    private PaymentResponse callTossPaymentCancelAPI(PaymentCancelRequest request, Payment payment) {
+        try {
+            HttpEntity<Map<String, Object>> entity = createTossCancelApiRequest(request, payment);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://api.tosspayments.com/v1/payments/" + request.getPaymentKey() + "/cancel",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            
+            log.debug("토스페이먼츠 취소 API 응답 성공: status={}", response.getStatusCode());
+            
+            return parseTossApiResponse(response.getBody());
+            
+        } catch (HttpClientErrorException e) {
+            log.error("토스페이먼츠 취소 API 호출 실패: {}", e.getResponseBodyAsString());
+            throw new BusinessException("결제 취소 중 오류가 발생했습니다: " + e.getStatusCode());
+        } catch (Exception e) {
+            log.error("토스페이먼츠 취소 API 호출 중 예외 발생: {}", e.getMessage(), e);
+            throw new BusinessException("결제 취소 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 토스페이먼츠 취소 API 요청 엔티티 생성
+     */
+    private HttpEntity<Map<String, Object>> createTossCancelApiRequest(PaymentCancelRequest request, Payment payment) {
+        HttpHeaders headers = createTossApiHeaders();
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("cancelReason", request.getCancelReason());
+        requestBody.put("cancelAmount", payment.getBalanceAmount());
+        return new HttpEntity<>(requestBody, headers);
     }
 } 

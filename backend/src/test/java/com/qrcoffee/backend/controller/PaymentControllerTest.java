@@ -37,6 +37,18 @@ class PaymentControllerTest {
 
     @MockBean
     private PaymentService paymentService;
+    
+    @MockBean
+    private com.qrcoffee.backend.config.TossPaymentsConfig tossPaymentsConfig;
+    
+    @MockBean
+    private org.springframework.web.client.RestTemplate restTemplate;
+    
+    @MockBean
+    private com.qrcoffee.backend.util.JwtUtil jwtUtil;
+    
+    @MockBean
+    private com.qrcoffee.backend.config.JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
     private ObjectMapper objectMapper;

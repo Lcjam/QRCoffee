@@ -77,22 +77,6 @@ public class SeatService {
     }
     
     /**
-     * QR코드로 좌석 조회
-     */
-    public SeatResponse getSeatByQRCode(String qrCode) {
-        log.info("QR코드로 좌석 조회: qrCode={}", qrCode);
-        
-        // QR코드 형식 검증
-        ValidationUtils.validateQRCodeFormat(qrCode, qrCodeUtil::isValidQRCode);
-        
-        // 좌석 조회 및 검증
-        Seat seat = seatRepository.findByQrCode(qrCode).orElse(null);
-        ValidationUtils.validateSeatExistsByQRCode(seat, qrCode);
-        
-        return SeatResponse.from(seat);
-    }
-    
-    /**
      * QR코드로 활성 좌석 조회 (고객용)
      */
     public SeatResponse getActiveSeatByQRCode(String qrCode) {
@@ -234,22 +218,6 @@ public class SeatService {
         return seatRepository.findByQrCodeAndIsActiveTrue(qrCode).isPresent();
     }
     
-    /**
-     * 모든 좌석의 QR코드 이미지 업데이트
-     */
-    @Transactional
-    public List<SeatResponse> updateAllQRCodeImages(Long storeId) {
-        log.info("모든 좌석의 QR코드 이미지 업데이트: storeId={}", storeId);
-        
-        List<Seat> seats = seatRepository.findByStoreIdOrderBySeatNumberAsc(storeId);
-        
-        seats.forEach(this::updateQRCodeImageForSeat);
-        
-        List<Seat> updatedSeats = seatRepository.saveAll(seats);
-        
-        return convertToSeatResponses(updatedSeats);
-    }
-    
     // ============ Private Helper Methods ============
     
     /**
@@ -338,17 +306,6 @@ public class SeatService {
         seat.setQrCode(newQrCode);
         seat.setQrCodeImageUrl(newQrCodeImageUrl);
         seat.setQrGeneratedAt(LocalDateTime.now());
-    }
-    
-    /**
-     * 좌석의 QR코드 이미지 업데이트
-     */
-    private void updateQRCodeImageForSeat(Seat seat) {
-        if (seat.getQrCode() != null) {
-            String qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(seat.getQrCode());
-            seat.setQrCodeImageUrl(qrCodeImageUrl);
-            log.info("좌석 QR코드 이미지 업데이트: seatId={}, seatNumber={}", seat.getId(), seat.getSeatNumber());
-        }
     }
     
     /**
