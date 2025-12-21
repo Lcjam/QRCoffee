@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,9 +72,7 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         // 전체 주문 수 (취소 제외)
-        long totalOrderCount = orderRepository.findByStoreIdOrderByCreatedAtDesc(storeId).stream()
-                .filter(order -> order.getStatus() != Order.OrderStatus.CANCELLED)
-                .count();
+        long totalOrderCount = orderRepository.countByStoreIdAndStatusNot(storeId, Order.OrderStatus.CANCELLED);
         
         return DashboardStatsResponse.BasicStats.builder()
                 .todayOrderCount(todayOrderCount)
@@ -209,29 +208,65 @@ public class DashboardService {
     
     /**
      * 일별 매출 조회 (최근 N일)
+     * GROUP BY를 사용한 단일 쿼리로 N+1 문제 해결
      */
     private List<DashboardStatsResponse.DailySales> getDailySales(Long storeId, int days) {
-        List<DashboardStatsResponse.DailySales> dailySales = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1);
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = today.atTime(23, 59, 59).plusSeconds(1);
         
+        // 단일 쿼리로 모든 일별 데이터 조회
+        List<Object[]> results = paymentRepository.findDailySalesByStoreId(
+                storeId, startDateTime, endDateTime);
+        
+        // 결과를 Map으로 변환 (날짜를 키로)
+        Map<String, DashboardStatsResponse.DailySales> salesMap = results.stream()
+                .collect(Collectors.toMap(
+                        result -> {
+                            // Native query의 DATE() 결과는 java.sql.Date 또는 String일 수 있음
+                            Object dateObj = result[0];
+                            if (dateObj instanceof java.sql.Date) {
+                                return ((java.sql.Date) dateObj).toLocalDate().format(DATE_FORMATTER);
+                            } else if (dateObj instanceof String) {
+                                return (String) dateObj;
+                            } else {
+                                return dateObj.toString();
+                            }
+                        },
+                        result -> {
+                            Object dateObj = result[0];
+                            String dateStr;
+                            if (dateObj instanceof java.sql.Date) {
+                                dateStr = ((java.sql.Date) dateObj).toLocalDate().format(DATE_FORMATTER);
+                            } else if (dateObj instanceof String) {
+                                dateStr = (String) dateObj;
+                            } else {
+                                dateStr = dateObj.toString();
+                            }
+                            Long orderCount = ((Number) result[1]).longValue();
+                            BigDecimal amount = result[2] != null ? 
+                                    new BigDecimal(result[2].toString()) : BigDecimal.ZERO;
+                            return DashboardStatsResponse.DailySales.builder()
+                                    .date(dateStr)
+                                    .amount(amount)
+                                    .orderCount(orderCount)
+                                    .build();
+                        }
+                ));
+        
+        // 모든 날짜에 대해 결과 생성 (데이터가 없는 날은 0으로 채움)
+        List<DashboardStatsResponse.DailySales> dailySales = new ArrayList<>();
         for (int i = days - 1; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
-            LocalDateTime startOfDay = date.atStartOfDay();
-            LocalDateTime endOfDay = date.atTime(23, 59, 59).plusSeconds(1);
+            String dateStr = date.format(DATE_FORMATTER);
             
-            List<Payment> payments = paymentRepository.findByStoreIdAndDateRange(
-                    storeId, startOfDay, endOfDay);
-            
-            BigDecimal amount = calculateTotalSales(payments);
-            long orderCount = payments.stream()
-                    .filter(p -> "DONE".equals(p.getStatus()))
-                    .count();
-            
-            dailySales.add(DashboardStatsResponse.DailySales.builder()
-                    .date(date.format(DATE_FORMATTER))
-                    .amount(amount)
-                    .orderCount(orderCount)
-                    .build());
+            dailySales.add(salesMap.getOrDefault(dateStr,
+                    DashboardStatsResponse.DailySales.builder()
+                            .date(dateStr)
+                            .amount(BigDecimal.ZERO)
+                            .orderCount(0L)
+                            .build()));
         }
         
         return dailySales;

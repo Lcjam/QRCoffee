@@ -1,6 +1,7 @@
 import { Client, IMessage } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Notification } from '../types/notification';
+import { getAuthToken } from './authService';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -10,17 +11,36 @@ export class WebSocketService {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 3000;
+  private isConnecting: boolean = false; // 재연결 경쟁 상태 방지
 
   /**
    * 관리자용 WebSocket 연결
    */
   connectAdmin(storeId: number, onNotification: (notification: Notification) => void): void {
+    // 이미 연결되어 있으면 무시
     if (this.client && this.isConnected) {
       console.log('WebSocket already connected');
       return;
     }
+    
+    // 이미 연결 중이면 무시 (경쟁 상태 방지)
+    if (this.isConnecting) {
+      console.log('WebSocket connection already in progress');
+      return;
+    }
+    
+    this.isConnecting = true;
 
-    const socket = new SockJS(`${API_BASE_URL}/ws/admin`);
+    // JWT 토큰 가져오기
+    const token = getAuthToken();
+    if (!token) {
+      console.error('WebSocket 연결 실패: 토큰이 없습니다.');
+      this.isConnecting = false;
+      return;
+    }
+
+    // 토큰을 query parameter로 전달
+    const socket = new SockJS(`${API_BASE_URL}/ws/admin?token=${encodeURIComponent(token)}`);
     this.client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: this.reconnectDelay,
@@ -29,6 +49,7 @@ export class WebSocketService {
       onConnect: () => {
         console.log('✅ WebSocket connected (Admin)');
         this.isConnected = true;
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
 
         // 관리자용 토픽 구독
@@ -45,15 +66,18 @@ export class WebSocketService {
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
         this.isConnected = false;
+        this.isConnecting = false;
       },
       onWebSocketClose: () => {
         console.log('WebSocket closed');
         this.isConnected = false;
+        this.isConnecting = false;
         this.attemptReconnect(storeId, onNotification);
       },
       onDisconnect: () => {
         console.log('WebSocket disconnected');
         this.isConnected = false;
+        this.isConnecting = false;
       }
     });
 
@@ -64,12 +88,26 @@ export class WebSocketService {
    * 고객용 WebSocket 연결
    */
   connectCustomer(orderId: number, onNotification: (notification: Notification) => void): void {
+    // 이미 연결되어 있으면 무시
     if (this.client && this.isConnected) {
       console.log('WebSocket already connected');
       return;
     }
+    
+    // 이미 연결 중이면 무시 (경쟁 상태 방지)
+    if (this.isConnecting) {
+      console.log('WebSocket connection already in progress');
+      return;
+    }
+    
+    this.isConnecting = true;
 
-    const socket = new SockJS(`${API_BASE_URL}/ws/customer`);
+    // 고객용 WebSocket은 토큰이 선택적 (로그인하지 않은 고객도 사용 가능)
+    const token = getAuthToken();
+    const url = token 
+      ? `${API_BASE_URL}/ws/customer?token=${encodeURIComponent(token)}`
+      : `${API_BASE_URL}/ws/customer`;
+    const socket = new SockJS(url);
     this.client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: this.reconnectDelay,
@@ -78,6 +116,7 @@ export class WebSocketService {
       onConnect: () => {
         console.log('✅ WebSocket connected (Customer)');
         this.isConnected = true;
+        this.isConnecting = false;
         this.reconnectAttempts = 0;
 
         // 고객용 토픽 구독
@@ -94,15 +133,18 @@ export class WebSocketService {
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
         this.isConnected = false;
+        this.isConnecting = false;
       },
       onWebSocketClose: () => {
         console.log('WebSocket closed');
         this.isConnected = false;
+        this.isConnecting = false;
         this.attemptReconnect(orderId, onNotification, 'customer');
       },
       onDisconnect: () => {
         console.log('WebSocket disconnected');
         this.isConnected = false;
+        this.isConnecting = false;
       }
     });
 
@@ -142,6 +184,7 @@ export class WebSocketService {
       this.client.deactivate();
       this.client = null;
       this.isConnected = false;
+      this.isConnecting = false;
       console.log('WebSocket disconnected');
     }
   }

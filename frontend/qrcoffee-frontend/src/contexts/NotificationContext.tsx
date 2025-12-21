@@ -97,13 +97,27 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   useEffect(() => {
     if (!user) return;
 
+    let websocketConnected = false;
+
     // 관리자용 WebSocket 연결
     if (userType === NotificationUserType.ADMIN && storeId) {
-      websocketService.connectAdmin(storeId, addNotification);
+      try {
+        websocketService.connectAdmin(storeId, addNotification);
+        websocketConnected = websocketService.getConnectionStatus();
+      } catch (error) {
+        console.error('WebSocket 연결 실패:', error);
+        websocketConnected = false;
+      }
     }
     // 고객용 WebSocket 연결
     else if (userType === NotificationUserType.CUSTOMER && orderId) {
-      websocketService.connectCustomer(orderId, addNotification);
+      try {
+        websocketService.connectCustomer(orderId, addNotification);
+        websocketConnected = websocketService.getConnectionStatus();
+      } catch (error) {
+        console.error('WebSocket 연결 실패:', error);
+        websocketConnected = false;
+      }
     }
 
     // 초기 알림 로드
@@ -116,10 +130,21 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     };
   }, [user, userType, storeId, orderId, addNotification, refreshNotifications, refreshUnreadCount]);
 
-  // 주기적으로 미읽음 개수 새로고침 (폴링)
+  // WebSocket 연결 실패 시에만 폴링 사용 (fallback)
   useEffect(() => {
+    const isWebSocketConnected = websocketService.getConnectionStatus();
+    
+    // WebSocket이 연결되어 있으면 폴링 불필요
+    if (isWebSocketConnected) {
+      return;
+    }
+
+    // WebSocket 연결 실패 시에만 폴링으로 미읽음 개수 새로고침
     const interval = setInterval(() => {
-      refreshUnreadCount();
+      const stillConnected = websocketService.getConnectionStatus();
+      if (!stillConnected) {
+        refreshUnreadCount();
+      }
     }, 30000); // 30초마다
 
     return () => clearInterval(interval);

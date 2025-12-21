@@ -40,5 +40,23 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+    
+    /**
+     * 매장별 일별 매출 통계 조회 (최근 N일)
+     * GROUP BY를 사용하여 단일 쿼리로 처리
+     */
+    @Query(value = "SELECT DATE(p.approved_at) as date, " +
+           "COUNT(p.id) as orderCount, " +
+           "COALESCE(SUM(p.total_amount), 0) as amount " +
+           "FROM payments p JOIN orders o ON p.order_id = o.id " +
+           "WHERE o.store_id = :storeId AND p.status = 'DONE' " +
+           "AND p.approved_at >= :startDate AND p.approved_at < :endDate " +
+           "GROUP BY DATE(p.approved_at) " +
+           "ORDER BY date ASC", nativeQuery = true)
+    List<Object[]> findDailySalesByStoreId(
+            @Param("storeId") Long storeId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }
 
