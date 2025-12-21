@@ -187,17 +187,28 @@ const CustomerOrderPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ pb: 10 }}>
+    <Box sx={{ pb: 12, minHeight: '100vh' }}>
       {/* 헤더 */}
-      <AppBar position="sticky" color="primary">
+      <AppBar
+        position="sticky"
+        color="transparent"
+        elevation={0}
+        sx={{
+          top: 0,
+          zIndex: 1100,
+          background: 'rgba(255,255,255,0.7)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.3)'
+        }}
+      >
         <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={() => navigate('/')} sx={{ mr: 2 }}>
+          <IconButton edge="start" onClick={() => navigate('/')} sx={{ mr: 2, color: 'text.primary' }}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {seat?.seatNumber ? `좌석 ${seat.seatNumber}` : '주문하기'}
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 'bold' }}>
+            {seat?.seatNumber ? `Table ${seat.seatNumber}` : 'Menu'}
           </Typography>
-          <IconButton color="inherit" onClick={() => setCartOpen(true)}>
+          <IconButton onClick={() => setCartOpen(true)} sx={{ color: 'primary.main' }}>
             <Badge badgeContent={cart.length} color="error">
               <ShoppingCartIcon />
             </Badge>
@@ -205,27 +216,45 @@ const CustomerOrderPage: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ mt: 2, mb: 2 }}>
+      <Container maxWidth="md" sx={{ mt: 3, mb: 4 }}>
         {/* 카테고리 탭 */}
         {Object.keys(categories).length > 0 && (
-          <Box sx={{ mb: 3, overflowX: 'auto' }}>
-            <Stack direction="row" spacing={1} sx={{ pb: 1 }}>
+          <Box sx={{ mb: 4, overflowX: 'auto', pb: 1 }}>
+            <Stack direction="row" spacing={1.5}>
               <Button
-                variant={selectedCategory === null ? 'contained' : 'outlined'}
+                variant={selectedCategory === null ? 'contained' : 'text'}
                 onClick={() => setSelectedCategory(null)}
-                size="small"
+                size="medium"
+                sx={{
+                  borderRadius: 100,
+                  minWidth: 80,
+                  fontWeight: 700,
+                  color: selectedCategory === null ? 'white' : 'text.secondary',
+                  backgroundColor: selectedCategory === null ? 'primary.main' : 'rgba(255,255,255,0.5)'
+                }}
               >
-                전체
+                All
               </Button>
               {Object.keys(categories).map(categoryId => {
                 const categoryMenus = categories[Number(categoryId)];
-                const categoryName = categoryMenus[0]?.categoryName || `카테고리 ${categoryId}`;
+                const categoryName = categoryMenus[0]?.categoryName || `Category ${categoryId}`;
+                const isSelected = selectedCategory === Number(categoryId);
                 return (
                   <Button
                     key={categoryId}
-                    variant={selectedCategory === Number(categoryId) ? 'contained' : 'outlined'}
+                    variant={isSelected ? 'contained' : 'text'}
                     onClick={() => setSelectedCategory(Number(categoryId))}
-                    size="small"
+                    size="medium"
+                    sx={{
+                      borderRadius: 100,
+                      fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                      color: isSelected ? 'white' : 'text.secondary',
+                      backgroundColor: isSelected ? 'primary.main' : 'rgba(255,255,255,0.5)',
+                      '&:hover': {
+                        backgroundColor: isSelected ? 'primary.dark' : 'rgba(255,255,255,0.8)'
+                      }
+                    }}
                   >
                     {categoryName}
                   </Button>
@@ -236,29 +265,57 @@ const CustomerOrderPage: React.FC = () => {
         )}
 
         {/* 메뉴 목록 */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 2.5 }}>
           {getFilteredMenus().map((menu) => (
-            <Card key={menu.id} sx={{ cursor: 'pointer' }} onClick={() => addToCart(menu)}>
-              {menu.imageUrl && (
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={menu.imageUrl}
-                  alt={menu.name}
-                />
-              )}
-              <CardContent>
-                <Typography variant="h6" component="div" noWrap>
+            <Card
+              key={menu.id}
+              sx={{
+                cursor: 'pointer',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative',
+                overflow: 'visible'
+              }}
+              onClick={() => addToCart(menu)}
+            >
+              <Box sx={{ position: 'relative', pt: '75%', borderRadius: 4, overflow: 'hidden', mx: 2, mt: 2, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                {menu.imageUrl ? (
+                  <CardMedia
+                    component="img"
+                    image={menu.imageUrl}
+                    alt={menu.name}
+                    sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', bgcolor: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography variant="body2" color="text.disabled">No Image</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <CardContent sx={{ flexGrow: 1, pt: 2, pb: 2 }}>
+                <Typography variant="subtitle1" component="div" sx={{ fontWeight: 700, lineHeight: 1.3, mb: 0.5 }}>
                   {menu.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', mb: 1.5, height: 32 }}>
                   {menu.description}
                 </Typography>
-                <Typography variant="h6" color="primary">
-                  {Number(menu.price).toLocaleString()}원
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800 }}>
+                    {Number(menu.price).toLocaleString()}
+                  </Typography>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(108, 93, 211, 0.4)' }}>
+                    <AddIcon sx={{ color: 'white', fontSize: 20 }} />
+                  </Box>
+                </Box>
                 {!menu.isAvailable && (
-                  <Chip label="품절" color="error" size="small" sx={{ mt: 1 }} />
+                  <Chip
+                    label="Sold Out"
+                    color="error"
+                    size="small"
+                    sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 'bold' }}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -266,9 +323,9 @@ const CustomerOrderPage: React.FC = () => {
         </Box>
 
         {getFilteredMenus().length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              표시할 메뉴가 없습니다.
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary">
+              No menus available.
             </Typography>
           </Box>
         )}
@@ -280,7 +337,13 @@ const CustomerOrderPage: React.FC = () => {
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         PaperProps={{
-          sx: { maxHeight: '80vh', borderTopLeftRadius: 16, borderTopRightRadius: 16 }
+          sx: {
+            maxHeight: '80vh',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)'
+          }
         }}
       >
         <Box sx={{ p: 3 }}>
