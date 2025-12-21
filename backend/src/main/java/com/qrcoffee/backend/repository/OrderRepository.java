@@ -43,5 +43,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * 매장별 특정 상태 주문 개수
      */
     long countByStoreIdAndStatus(Long storeId, Order.OrderStatus status);
+    
+    /**
+     * 매장별 시간대별 통계 조회 (오늘)
+     */
+    @Query("SELECT HOUR(o.createdAt) as hour, COUNT(o) as orderCount, COALESCE(SUM(o.totalAmount), 0) as salesAmount " +
+           "FROM Order o " +
+           "WHERE o.storeId = :storeId AND DATE(o.createdAt) = DATE(:date) " +
+           "GROUP BY HOUR(o.createdAt) " +
+           "ORDER BY hour ASC")
+    List<Object[]> findHourlyStatsByStoreId(@Param("storeId") Long storeId, @Param("date") LocalDateTime date);
 }
 
