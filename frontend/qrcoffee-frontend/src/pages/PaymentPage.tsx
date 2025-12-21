@@ -122,6 +122,21 @@ const PaymentPage: React.FC = () => {
     }
   };
 
+  // 모바일 기기 감지 유틸리티
+  const isMobileDevice = (): boolean => {
+    // User-Agent 기반 감지
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+    
+    // 화면 크기 기반 감지 (보조)
+    const isSmallScreen = window.innerWidth <= 768;
+    
+    // 터치 지원 여부 확인
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    return mobileRegex.test(userAgent) || (isSmallScreen && hasTouch);
+  };
+
   const handlePayment = async () => {
     if (!paymentResponse || !paymentRef.current) {
       setError('결제 정보가 준비되지 않았습니다.');
@@ -132,7 +147,11 @@ const PaymentPage: React.FC = () => {
       setLoading(true);
       setError('');
 
+      const isMobile = isMobileDevice();
+      
       // 결제창 띄우기 (API 개별 연동 키 방식)
+      // 토스페이먼츠는 User-Agent를 자동 감지하지만, 
+      // 명시적으로 모바일 환경임을 알리기 위해 추가 정보 전달 가능
       await paymentRef.current.requestPayment({
         method: 'CARD', // 카드 결제
         amount: {
@@ -146,7 +165,7 @@ const PaymentPage: React.FC = () => {
         // 카드 결제 옵션
         card: {
           useEscrow: false,
-          flowMode: 'DEFAULT', // 통합결제창
+          flowMode: 'DEFAULT', // 통합결제창 (모바일에서는 자동으로 모바일 UI 표시)
           useCardPoint: false,
           useAppCardOnly: false
         }
@@ -161,11 +180,23 @@ const PaymentPage: React.FC = () => {
     return null;
   }
 
+  const isMobile = isMobileDevice();
+
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Typography variant="h5" component="h1" gutterBottom>
         결제하기
       </Typography>
+
+      {/* 모바일 감지 정보 표시 (개발용, 나중에 제거 가능) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          {isMobile ? '📱 모바일 모드로 감지됨' : '💻 PC 모드로 감지됨'}
+          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+            User-Agent: {navigator.userAgent.substring(0, 50)}...
+          </Typography>
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -212,6 +243,11 @@ const PaymentPage: React.FC = () => {
             fullWidth
             onClick={handlePayment}
             disabled={loading}
+            sx={{
+              minHeight: 48,
+              fontSize: '1.1rem',
+              fontWeight: 700
+            }}
           >
             {loading ? <CircularProgress size={24} /> : '결제하기'}
           </Button>
