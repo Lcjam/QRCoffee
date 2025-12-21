@@ -58,5 +58,33 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "GROUP BY HOUR(o.createdAt) " +
            "ORDER BY hour ASC")
     List<Object[]> findHourlyStatsByStoreId(@Param("storeId") Long storeId, @Param("date") LocalDateTime date);
+    
+    /**
+     * 매장별 기본 통계 조회 (단일 쿼리로 통합)
+     * 오늘 주문 수, 대기 주문 수, 오늘 매출액, 전체 주문 수를 한 번에 조회
+     */
+    @Query(value = "SELECT " +
+           "COUNT(CASE WHEN DATE(o.created_at) = DATE(:today) THEN 1 END) as todayOrderCount, " +
+           "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END) as pendingOrderCount, " +
+           "COALESCE(SUM(CASE WHEN DATE(p.approved_at) = DATE(:today) AND p.status = 'DONE' THEN p.total_amount ELSE 0 END), 0) as todaySalesAmount, " +
+           "COUNT(CASE WHEN o.status != 'CANCELLED' THEN 1 END) as totalOrderCount " +
+           "FROM orders o " +
+           "LEFT JOIN payments p ON o.id = p.order_id " +
+           "WHERE o.store_id = :storeId", nativeQuery = true)
+    Object[] findBasicStatsByStoreId(@Param("storeId") Long storeId, @Param("today") LocalDateTime today);
+    
+    /**
+     * 매장별 주문 상태별 개수 조회 (단일 쿼리로 통합)
+     * CASE WHEN을 사용하여 모든 상태의 개수를 한 번에 조회
+     */
+    @Query(value = "SELECT " +
+           "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END) as pendingCount, " +
+           "COUNT(CASE WHEN o.status = 'PREPARING' THEN 1 END) as preparingCount, " +
+           "COUNT(CASE WHEN o.status = 'COMPLETED' THEN 1 END) as completedCount, " +
+           "COUNT(CASE WHEN o.status = 'PICKED_UP' THEN 1 END) as pickedUpCount, " +
+           "COUNT(CASE WHEN o.status = 'CANCELLED' THEN 1 END) as cancelledCount " +
+           "FROM orders o " +
+           "WHERE o.store_id = :storeId", nativeQuery = true)
+    Object[] findOrderStatsByStoreId(@Param("storeId") Long storeId);
 }
 

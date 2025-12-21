@@ -7,6 +7,9 @@ import com.qrcoffee.backend.repository.NotificationRepository;
 import com.qrcoffee.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,10 +136,18 @@ public class NotificationService {
     }
     
     /**
-     * 매장별 알림 목록 조회
+     * 매장별 알림 목록 조회 (Pagination 지원)
+     */
+    public Page<Notification> getNotifications(Long storeId, Notification.UserType userType, Pageable pageable) {
+        return notificationRepository.findByStoreIdAndUserTypeOrderBySentAtDesc(storeId, userType, pageable);
+    }
+    
+    /**
+     * 매장별 알림 목록 조회 (하위 호환성, 기본 20개)
      */
     public List<Notification> getNotifications(Long storeId, Notification.UserType userType) {
-        return notificationRepository.findByStoreIdAndUserTypeOrderBySentAtDesc(storeId, userType);
+        Pageable pageable = PageRequest.of(0, 20);
+        return getNotifications(storeId, userType, pageable).getContent();
     }
     
     /**

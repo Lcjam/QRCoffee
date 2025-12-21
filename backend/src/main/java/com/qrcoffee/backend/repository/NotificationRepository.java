@@ -28,6 +28,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByStoreIdAndUserTypeOrderBySentAtDesc(Long storeId, Notification.UserType userType);
     
     /**
+     * 매장별 알림 목록 조회 (최신순, Pagination 지원)
+     */
+    org.springframework.data.domain.Page<Notification> findByStoreIdAndUserTypeOrderBySentAtDesc(
+            Long storeId, Notification.UserType userType, org.springframework.data.domain.Pageable pageable);
+    
+    /**
      * 매장별 미읽음 알림 목록 조회
      */
     List<Notification> findByStoreIdAndUserTypeAndIsReadFalseOrderBySentAtDesc(

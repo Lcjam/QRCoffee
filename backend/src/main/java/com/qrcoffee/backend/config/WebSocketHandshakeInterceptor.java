@@ -85,6 +85,10 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             attributes.put("userRole", role);
             attributes.put("storeId", storeId);
             
+            // IP 주소 저장 (Rate Limiting용)
+            String clientIp = getClientIpAddress(request);
+            attributes.put("clientIp", clientIp);
+            
             log.debug("관리자 WebSocket 연결 허용: {} (역할: {}, 매장: {})", email, role, storeId);
             return true;
             
@@ -120,9 +124,39 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             }
         }
         
+        // IP 주소 저장 (Rate Limiting용)
+        String clientIp = getClientIpAddress(request);
+        attributes.put("clientIp", clientIp);
+        
         // orderId는 나중에 구독 시 검증
         log.debug("고객 WebSocket 연결 허용 (토큰 없음)");
         return true;
+    }
+    
+    /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        
+        // X-Forwarded-For는 여러 IP가 있을 수 있으므로 첫 번째 IP 사용
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        
+        return ip != null ? ip : "unknown";
     }
     
     @Override
@@ -133,19 +167,21 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     
     /**
      * HTTP 요청에서 JWT 토큰 추출
-     * Query parameter 또는 Header에서 토큰을 가져올 수 있음
+     * STOMP connectHeaders의 Authorization 헤더에서 토큰을 가져옴
+     * 보안상 query parameter는 사용하지 않음 (로그, 브라우저 히스토리 노출 방지)
      */
     private String extractTokenFromRequest(HttpServletRequest request) {
-        // 1. Query parameter에서 토큰 확인 (WebSocket 연결 시 사용)
-        String token = request.getParameter("token");
-        if (StringUtils.hasText(token)) {
-            return token;
-        }
-        
-        // 2. Authorization 헤더에서 토큰 확인
+        // Authorization 헤더에서 토큰 확인 (STOMP connectHeaders 사용)
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
+        }
+        
+        // 하위 호환성을 위해 query parameter도 확인 (deprecated, 제거 예정)
+        String token = request.getParameter("token");
+        if (StringUtils.hasText(token)) {
+            log.warn("WebSocket 토큰이 query parameter로 전달됨. connectHeaders 사용을 권장합니다.");
+            return token;
         }
         
         return null;

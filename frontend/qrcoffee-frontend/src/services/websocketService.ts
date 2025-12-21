@@ -39,10 +39,13 @@ export class WebSocketService {
       return;
     }
 
-    // 토큰을 query parameter로 전달
-    const socket = new SockJS(`${API_BASE_URL}/ws/admin?token=${encodeURIComponent(token)}`);
+    // 토큰을 STOMP connectHeaders로 전달 (query parameter 대신)
+    const socket = new SockJS(`${API_BASE_URL}/ws/admin`);
     this.client = new Client({
       webSocketFactory: () => socket,
+      connectHeaders: {
+        Authorization: `Bearer ${token}`
+      },
       reconnectDelay: this.reconnectDelay,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -104,12 +107,12 @@ export class WebSocketService {
 
     // 고객용 WebSocket은 토큰이 선택적 (로그인하지 않은 고객도 사용 가능)
     const token = getAuthToken();
-    const url = token 
-      ? `${API_BASE_URL}/ws/customer?token=${encodeURIComponent(token)}`
-      : `${API_BASE_URL}/ws/customer`;
-    const socket = new SockJS(url);
+    const socket = new SockJS(`${API_BASE_URL}/ws/customer`);
     this.client = new Client({
       webSocketFactory: () => socket,
+      connectHeaders: token ? {
+        Authorization: `Bearer ${token}`
+      } : {},
       reconnectDelay: this.reconnectDelay,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
