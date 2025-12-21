@@ -18,7 +18,6 @@ import {
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { CartItem } from '../types/order';
 import { Seat } from '../types/seat';
-import { orderService } from '../services/orderService';
 
 const OrderCheckoutPage: React.FC = () => {
   const location = useLocation();
