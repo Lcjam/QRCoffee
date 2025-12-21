@@ -55,24 +55,19 @@ public class DashboardService {
     
     /**
      * 기본 통계 조회
+     * CASE WHEN을 사용한 단일 쿼리로 N+1 문제 해결
      */
     public DashboardStatsResponse.BasicStats getBasicStats(Long storeId) {
         LocalDateTime today = LocalDateTime.now();
-        LocalDateTime startOfToday = today.toLocalDate().atStartOfDay();
-        LocalDateTime endOfToday = today.toLocalDate().atTime(23, 59, 59);
         
-        long todayOrderCount = orderRepository.countByStoreIdAndDate(storeId, today);
-        long pendingOrderCount = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PENDING);
+        // 단일 쿼리로 모든 기본 통계 조회
+        Object[] result = orderRepository.findBasicStatsByStoreId(storeId, today);
         
-        // 오늘 매출액 계산
-        List<Payment> todayPayments = paymentRepository.findByStoreIdAndDateRange(
-                storeId, startOfToday, endOfToday.plusSeconds(1));
-        BigDecimal todaySalesAmount = todayPayments.stream()
-                .map(Payment::getTotalAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // 전체 주문 수 (취소 제외)
-        long totalOrderCount = orderRepository.countByStoreIdAndStatusNot(storeId, Order.OrderStatus.CANCELLED);
+        long todayOrderCount = ((Number) result[0]).longValue();
+        long pendingOrderCount = ((Number) result[1]).longValue();
+        BigDecimal todaySalesAmount = result[2] != null ? 
+                new BigDecimal(result[2].toString()) : BigDecimal.ZERO;
+        long totalOrderCount = ((Number) result[3]).longValue();
         
         return DashboardStatsResponse.BasicStats.builder()
                 .todayOrderCount(todayOrderCount)
@@ -120,14 +115,18 @@ public class DashboardService {
     
     /**
      * 주문 현황 조회
+     * CASE WHEN을 사용한 단일 쿼리로 N+1 문제 해결
      */
     public DashboardStatsResponse.OrderStats getOrderStats(Long storeId) {
+        // 단일 쿼리로 모든 주문 상태별 개수 조회
+        Object[] result = orderRepository.findOrderStatsByStoreId(storeId);
+        
         return DashboardStatsResponse.OrderStats.builder()
-                .pendingCount(orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PENDING))
-                .preparingCount(orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PREPARING))
-                .completedCount(orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.COMPLETED))
-                .pickedUpCount(orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PICKED_UP))
-                .cancelledCount(orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.CANCELLED))
+                .pendingCount(((Number) result[0]).longValue())
+                .preparingCount(((Number) result[1]).longValue())
+                .completedCount(((Number) result[2]).longValue())
+                .pickedUpCount(((Number) result[3]).longValue())
+                .cancelledCount(((Number) result[4]).longValue())
                 .build();
     }
     

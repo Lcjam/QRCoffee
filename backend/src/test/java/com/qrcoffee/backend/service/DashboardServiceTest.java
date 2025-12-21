@@ -13,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,13 +53,15 @@ class DashboardServiceTest {
     @Test
     @DisplayName("기본 통계 조회")
     void testGetBasicStats() {
-        // given
-        when(orderRepository.countByStoreIdAndDate(eq(testStoreId), any(LocalDateTime.class)))
-                .thenReturn(10L);
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.PENDING))
-                .thenReturn(3L);
-        when(paymentRepository.findByStoreIdAndDateRange(eq(testStoreId), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(Collections.emptyList());
+        // given - 단일 쿼리로 통합된 메서드 사용
+        Object[] mockResult = new Object[]{
+            10L,  // todayOrderCount
+            3L,   // pendingOrderCount
+            50000L, // todaySalesAmount
+            100L   // totalOrderCount
+        };
+        when(orderRepository.findBasicStatsByStoreId(eq(testStoreId), any(LocalDateTime.class)))
+                .thenReturn(mockResult);
         
         // when
         DashboardStatsResponse.BasicStats stats = dashboardService.getBasicStats(testStoreId);
@@ -66,9 +70,10 @@ class DashboardServiceTest {
         assertThat(stats).isNotNull();
         assertThat(stats.getTodayOrderCount()).isEqualTo(10L);
         assertThat(stats.getPendingOrderCount()).isEqualTo(3L);
+        assertThat(stats.getTodaySalesAmount()).isEqualTo(50000L);
+        assertThat(stats.getTotalOrderCount()).isEqualTo(100L);
         
-        verify(orderRepository, times(1)).countByStoreIdAndDate(eq(testStoreId), any(LocalDateTime.class));
-        verify(orderRepository, times(1)).countByStoreIdAndStatus(testStoreId, Order.OrderStatus.PENDING);
+        verify(orderRepository, times(1)).findBasicStatsByStoreId(eq(testStoreId), any(LocalDateTime.class));
     }
     
     @Test
@@ -100,17 +105,16 @@ class DashboardServiceTest {
     @Test
     @DisplayName("주문 현황 조회")
     void testGetOrderStats() {
-        // given
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.PENDING))
-                .thenReturn(5L);
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.PREPARING))
-                .thenReturn(3L);
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.COMPLETED))
-                .thenReturn(10L);
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.PICKED_UP))
-                .thenReturn(20L);
-        when(orderRepository.countByStoreIdAndStatus(testStoreId, Order.OrderStatus.CANCELLED))
-                .thenReturn(2L);
+        // given - 단일 쿼리로 통합된 메서드 사용
+        Object[] mockResult = new Object[]{
+            5L,  // pendingCount
+            3L,  // preparingCount
+            10L, // completedCount
+            20L, // pickedUpCount
+            2L   // cancelledCount
+        };
+        when(orderRepository.findOrderStatsByStoreId(testStoreId))
+                .thenReturn(mockResult);
         
         // when
         DashboardStatsResponse.OrderStats orderStats = dashboardService.getOrderStats(testStoreId);
@@ -123,14 +127,16 @@ class DashboardServiceTest {
         assertThat(orderStats.getPickedUpCount()).isEqualTo(20L);
         assertThat(orderStats.getCancelledCount()).isEqualTo(2L);
         
-        verify(orderRepository, times(5)).countByStoreIdAndStatus(eq(testStoreId), any(Order.OrderStatus.class));
+        verify(orderRepository, times(1)).findOrderStatsByStoreId(testStoreId);
     }
     
     @Test
     @DisplayName("인기 메뉴 조회")
     void testGetPopularMenus() {
-        // given
-        when(orderItemRepository.findPopularMenusByStoreId(testStoreId, 10))
+        // given - Pageable 파라미터 포함
+        Pageable pageable = PageRequest.of(0, 10);
+        when(orderItemRepository.findPopularMenusByStoreId(
+                eq(testStoreId), eq(Order.OrderStatus.CANCELLED), eq(pageable)))
                 .thenReturn(Collections.emptyList());
         
         // when
@@ -139,7 +145,8 @@ class DashboardServiceTest {
         // then
         assertThat(popularMenus).isNotNull();
         
-        verify(orderItemRepository, times(1)).findPopularMenusByStoreId(testStoreId, 10);
+        verify(orderItemRepository, times(1)).findPopularMenusByStoreId(
+                eq(testStoreId), eq(Order.OrderStatus.CANCELLED), any(Pageable.class));
     }
     
     @Test
@@ -161,14 +168,19 @@ class DashboardServiceTest {
     @Test
     @DisplayName("전체 대시보드 통계 조회")
     void testGetDashboardStats() {
-        // given
-        when(orderRepository.countByStoreIdAndDate(eq(testStoreId), any(LocalDateTime.class)))
-                .thenReturn(10L);
-        when(orderRepository.countByStoreIdAndStatus(eq(testStoreId), any(Order.OrderStatus.class)))
-                .thenReturn(0L);
+        // given - 수정된 메서드 시그니처에 맞게 수정
+        Object[] basicStatsResult = new Object[]{10L, 3L, 50000L, 100L};
+        when(orderRepository.findBasicStatsByStoreId(eq(testStoreId), any(LocalDateTime.class)))
+                .thenReturn(basicStatsResult);
+        
+        Object[] orderStatsResult = new Object[]{5L, 3L, 10L, 20L, 2L};
+        when(orderRepository.findOrderStatsByStoreId(testStoreId))
+                .thenReturn(orderStatsResult);
+        
         when(paymentRepository.findByStoreIdAndDateRange(eq(testStoreId), any(LocalDateTime.class), any(LocalDateTime.class)))
                 .thenReturn(Collections.emptyList());
-        when(orderItemRepository.findPopularMenusByStoreId(testStoreId, 10))
+        when(orderItemRepository.findPopularMenusByStoreId(
+                eq(testStoreId), eq(Order.OrderStatus.CANCELLED), any(Pageable.class)))
                 .thenReturn(Collections.emptyList());
         when(orderRepository.findHourlyStatsByStoreId(eq(testStoreId), any(LocalDateTime.class)))
                 .thenReturn(Collections.emptyList());
