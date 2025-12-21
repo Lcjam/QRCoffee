@@ -4,6 +4,7 @@ import com.qrcoffee.backend.dto.OrderRequest;
 import com.qrcoffee.backend.dto.OrderResponse;
 import com.qrcoffee.backend.dto.OrderItemRequest;
 import com.qrcoffee.backend.entity.*;
+import com.qrcoffee.backend.entity.Notification;
 import com.qrcoffee.backend.exception.BusinessException;
 import com.qrcoffee.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,8 @@ public class OrderService {
     private final MenuRepository menuRepository;
     private final SeatRepository seatRepository;
     private final StoreRepository storeRepository;
+    private final NotificationService notificationService;
+    private final WebSocketNotificationService webSocketNotificationService;
     
     /**
      * 주문 생성
@@ -59,6 +62,15 @@ public class OrderService {
         
         // 주문 저장
         Order savedOrder = orderRepository.save(order);
+        
+        // 주문 접수 알림 전송 (관리자에게)
+        try {
+            Notification notification = notificationService.sendOrderReceivedNotification(savedOrder.getId());
+            webSocketNotificationService.notifyOrderReceived(savedOrder.getStoreId(), notification);
+        } catch (Exception e) {
+            log.error("주문 접수 알림 전송 실패: orderId={}", savedOrder.getId(), e);
+            // 알림 실패는 주문 생성 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+        }
         
         log.info("주문 생성 완료: orderId={}, orderNumber={}, totalAmount={}", 
                 savedOrder.getId(), savedOrder.getOrderNumber(), savedOrder.getTotalAmount());
@@ -244,6 +256,25 @@ public class OrderService {
             
             Order updatedOrder = orderRepository.save(order);
             
+            // 주문 상태 변경에 따른 알림 전송
+            try {
+                if (newStatus == Order.OrderStatus.COMPLETED) {
+                    // 제조 완료 알림 (고객에게)
+                    Notification notification = notificationService.sendOrderCompletedNotification(orderId);
+                    webSocketNotificationService.notifyOrderCompleted(orderId, notification);
+                } else if (newStatus == Order.OrderStatus.CANCELLED) {
+                    // 주문 취소 알림 (양방향)
+                    List<Notification> notifications = notificationService.sendOrderCancelledNotification(orderId);
+                    if (notifications.size() >= 2) {
+                        webSocketNotificationService.notifyOrderCancelled(
+                                order.getStoreId(), orderId, notifications.get(0), notifications.get(1));
+                    }
+                }
+            } catch (Exception e) {
+                log.error("주문 상태 변경 알림 전송 실패: orderId={}, status={}", orderId, newStatus, e);
+                // 알림 실패는 상태 변경 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+            }
+            
             log.info("주문 상태 변경: orderId={}, {} -> {}", 
                     orderId, currentStatus, newStatus);
             
@@ -290,6 +321,18 @@ public class OrderService {
         
         order.cancel();
         Order cancelledOrder = orderRepository.save(order);
+        
+        // 주문 취소 알림 전송 (양방향)
+        try {
+            List<Notification> notifications = notificationService.sendOrderCancelledNotification(orderId);
+            if (notifications.size() >= 2) {
+                webSocketNotificationService.notifyOrderCancelled(
+                        order.getStoreId(), orderId, notifications.get(0), notifications.get(1));
+            }
+        } catch (Exception e) {
+            log.error("주문 취소 알림 전송 실패: orderId={}", orderId, e);
+            // 알림 실패는 주문 취소 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+        }
         
         log.info("주문 취소: orderId={}, orderNumber={}", orderId, order.getOrderNumber());
         

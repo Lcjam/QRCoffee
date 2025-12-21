@@ -13,6 +13,7 @@ import com.qrcoffee.backend.dto.OrderItemRequest;
 import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.entity.Payment;
 import com.qrcoffee.backend.entity.User;
+import com.qrcoffee.backend.entity.Notification;
 import com.qrcoffee.backend.exception.BusinessException;
 import com.qrcoffee.backend.repository.OrderRepository;
 import com.qrcoffee.backend.repository.PaymentRepository;
@@ -56,6 +57,8 @@ public class PaymentService {
     private final TossPaymentsConfig tossPaymentsConfig;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
+    private final WebSocketNotificationService webSocketNotificationService;
     
     /**
      * 장바구니에서 바로 결제 준비 (주문 생성 없이)
@@ -196,6 +199,15 @@ public class PaymentService {
             Order order = createOrderFromPayment(payment, metadata);
             payment.setOrderId(order.getId());
             paymentRepository.save(payment);
+            
+            // 결제 완료 알림 전송 (고객에게)
+            try {
+                Notification notification = notificationService.sendPaymentCompletedNotification(order.getId());
+                webSocketNotificationService.notifyPaymentCompleted(order.getId(), notification);
+            } catch (Exception e) {
+                log.error("결제 완료 알림 전송 실패: orderId={}", order.getId(), e);
+                // 알림 실패는 결제 완료 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+            }
             
             log.info("결제 성공 후 주문 생성 완료: orderId={}, paymentId={}", order.getId(), payment.getId());
         }
