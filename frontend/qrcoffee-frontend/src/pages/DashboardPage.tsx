@@ -57,14 +57,14 @@ const DashboardPageContent: React.FC = () => {
   const { user, logout } = useAuth();
   const { unreadCount } = useNotification();
   const navigate = useNavigate();
-  
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
     loadDashboardStats();
-    
+
     // 30초마다 통계 새로고침
     const interval = setInterval(() => {
       loadDashboardStats();
@@ -199,6 +199,49 @@ const DashboardPageContent: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      {/* 기능 메뉴 - 상단 이동 */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" component="h2" gutterBottom>
+          관리 메뉴
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          {user?.role === 'MASTER' && (
+            <Button
+              variant="contained"
+              onClick={() => navigate('/store-management')}
+            >
+              매장 관리
+            </Button>
+          )}
+          {user?.role === 'MASTER' && (
+            <Button
+              variant="contained"
+              onClick={() => navigate('/sub-account-management')}
+            >
+              서브계정 관리
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => navigate('/menu-management')}
+          >
+            메뉴 관리
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/seat-management')}
+          >
+            좌석 관리
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/order-management')}
+          >
+            주문 관리
+          </Button>
+        </Box>
+      </Paper>
 
       {stats && (
         <>
@@ -373,56 +416,13 @@ const DashboardPageContent: React.FC = () => {
           </Box>
         </>
       )}
-
-      {/* 기능 메뉴 */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" component="h2" gutterBottom>
-          관리 메뉴
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          {user?.role === 'MASTER' && (
-            <Button 
-              variant="contained" 
-              onClick={() => navigate('/store-management')}
-            >
-              매장 관리
-            </Button>
-          )}
-          {user?.role === 'MASTER' && (
-            <Button 
-              variant="contained" 
-              onClick={() => navigate('/sub-account-management')}
-            >
-              서브계정 관리
-            </Button>
-          )}
-          <Button 
-            variant="contained" 
-            onClick={() => navigate('/menu-management')}
-          >
-            메뉴 관리
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => navigate('/seat-management')}
-          >
-            좌석 관리
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => navigate('/order-management')}
-          >
-            주문 관리
-          </Button>
-        </Box>
-      </Paper>
     </Container>
   );
 };
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  
+
   if (!user || !user.storeId) {
     return null;
   }
