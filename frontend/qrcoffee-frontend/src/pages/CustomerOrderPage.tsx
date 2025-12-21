@@ -22,7 +22,12 @@ import {
   Divider,
   TextField,
   Stack,
-  Paper
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -51,6 +56,12 @@ const CustomerOrderPage: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [customerRequest, setCustomerRequest] = useState('');
+  const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
+  const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
+  const [tempQuantity, setTempQuantity] = useState(1);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [showCartButton, setShowCartButton] = useState(false);
 
   useEffect(() => {
     if (!qrCode) {
@@ -97,13 +108,23 @@ const CustomerOrderPage: React.FC = () => {
     }
   };
 
-  const addToCart = (menu: Menu) => {
+  const handleMenuClick = (menu: Menu) => {
+    if (!menu.isAvailable) {
+      return;
+    }
+    setSelectedMenu(menu);
+    const existingItem = cart.find(item => item.menuId === menu.id);
+    setTempQuantity(existingItem ? existingItem.quantity : 1);
+    setQuantityDialogOpen(true);
+  };
+
+  const addToCart = (menu: Menu, quantity: number) => {
     const existingItem = cart.find(item => item.menuId === menu.id);
 
     if (existingItem) {
       setCart(cart.map(item =>
         item.menuId === menu.id
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: quantity }
           : item
       ));
     } else {
@@ -111,11 +132,48 @@ const CustomerOrderPage: React.FC = () => {
         menuId: menu.id,
         menuName: menu.name,
         price: Number(menu.price),
-        quantity: 1,
+        quantity: quantity,
         imageUrl: menu.imageUrl
       }]);
     }
-    setCartOpen(true);
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedMenu) return;
+    
+    addToCart(selectedMenu, tempQuantity);
+    setQuantityDialogOpen(false);
+    setSnackbarMessage(`${selectedMenu.name} ${tempQuantity}개가 장바구니에 추가되었습니다.`);
+    setSnackbarOpen(true);
+    setShowCartButton(true);
+    setSelectedMenu(null);
+  };
+
+  const handleOrderDirectly = () => {
+    if (!selectedMenu || !seat) return;
+    
+    const singleItemCart: CartItem[] = [{
+      menuId: selectedMenu.id,
+      menuName: selectedMenu.name,
+      price: Number(selectedMenu.price),
+      quantity: tempQuantity,
+      imageUrl: selectedMenu.imageUrl
+    }];
+
+    setQuantityDialogOpen(false);
+    navigate('/payment', {
+      state: {
+        seat,
+        cart: singleItemCart,
+        totalPrice: Number(selectedMenu.price) * tempQuantity,
+        customerRequest: undefined
+      }
+    });
+  };
+
+  const handleQuantityChange = (delta: number) => {
+    const newQuantity = Math.max(1, tempQuantity + delta);
+    setTempQuantity(newQuantity);
   };
 
   const removeFromCart = (menuId: number) => {
@@ -288,14 +346,15 @@ const CustomerOrderPage: React.FC = () => {
             <Card
               key={menu.id}
               sx={{
-                cursor: 'pointer',
+                cursor: menu.isAvailable ? 'pointer' : 'not-allowed',
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
-                overflow: 'visible'
+                overflow: 'visible',
+                opacity: menu.isAvailable ? 1 : 0.6
               }}
-              onClick={() => addToCart(menu)}
+              onClick={() => handleMenuClick(menu)}
             >
               <Box sx={{ position: 'relative', pt: '75%', borderRadius: 4, overflow: 'hidden', mx: 2, mt: 2, boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
                 {menu.imageUrl ? (
@@ -498,6 +557,125 @@ const CustomerOrderPage: React.FC = () => {
           )}
         </Box>
       </Drawer>
+
+      {/* 수량 설정 다이얼로그 */}
+      <Dialog
+        open={quantityDialogOpen}
+        onClose={() => setQuantityDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            p: 2
+          }
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h6" fontWeight={700}>
+            {selectedMenu?.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {selectedMenu?.description}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, py: 2 }}>
+            <Typography variant="h5" color="primary.main" fontWeight={800}>
+              {selectedMenu && (Number(selectedMenu.price) * tempQuantity).toLocaleString()}원
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <IconButton
+                onClick={() => handleQuantityChange(-1)}
+                sx={{
+                  minWidth: 48,
+                  minHeight: 48,
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  color: 'primary.main'
+                }}
+              >
+                <RemoveIcon />
+              </IconButton>
+              <Typography variant="h4" sx={{ minWidth: 60, textAlign: 'center', fontWeight: 700 }}>
+                {tempQuantity}
+              </Typography>
+              <IconButton
+                onClick={() => handleQuantityChange(1)}
+                sx={{
+                  minWidth: 48,
+                  minHeight: 48,
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  color: 'primary.main'
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ flexDirection: 'column', gap: 1, px: 2, pb: 2 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            size="large"
+            startIcon={<ShoppingCartIcon />}
+            onClick={handleAddToCart}
+            sx={{
+              minHeight: 48,
+              fontSize: '1rem',
+              fontWeight: 600
+            }}
+          >
+            담기
+          </Button>
+          <Button
+            variant="contained"
+            fullWidth
+            size="large"
+            onClick={handleOrderDirectly}
+            sx={{
+              minHeight: 48,
+              fontSize: '1.1rem',
+              fontWeight: 700
+            }}
+          >
+            주문하기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 담기 성공 스낵바 */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+          action={
+            showCartButton && (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  setCartOpen(true);
+                  setShowCartButton(false);
+                }}
+              >
+                장바구니 가기
+              </Button>
+            )
+          }
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
