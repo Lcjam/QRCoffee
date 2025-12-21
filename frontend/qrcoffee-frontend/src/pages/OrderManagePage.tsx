@@ -22,6 +22,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   Divider,
   Select,
   MenuItem,
@@ -29,7 +30,9 @@ import {
   InputLabel,
   Alert,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Badge,
+  Drawer
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -40,6 +43,10 @@ import {
 } from '@mui/icons-material';
 import { Order, OrderStatus, getOrderStatusText, getPaymentStatusText } from '../types/order';
 import { orderService } from '../services/orderService';
+import { NotificationProvider, useNotification } from '../contexts/NotificationContext';
+import { NotificationUserType } from '../types/notification';
+import { useAuth } from '../contexts/AuthContext';
+import { Notifications as NotificationsIcon, Close as CloseIcon } from '@mui/icons-material';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -56,7 +63,8 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const OrderManagePage: React.FC = () => {
+const OrderManagePageContent: React.FC = () => {
+  const { unreadCount, notifications, markAsRead, refreshNotifications } = useNotification();
   const [tabValue, setTabValue] = useState(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -66,13 +74,26 @@ const OrderManagePage: React.FC = () => {
   const [newStatus, setNewStatus] = useState<OrderStatus>('PREPARING');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
 
   useEffect(() => {
     loadOrders();
   }, []);
 
+  // 알림 수신 시 주문 목록 새로고침
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0];
+      // 주문 접수 알림이면 주문 목록 새로고침
+      if (latestNotification.notificationType === 'ORDER_RECEIVED') {
+        loadOrders();
+      }
+    }
+  }, [notifications]);
+
   useEffect(() => {
     filterOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, tabValue]);
 
   const loadOrders = async () => {
@@ -138,6 +159,7 @@ const OrderManagePage: React.FC = () => {
       await orderService.updateOrderStatus(selectedOrder.id, newStatus);
       setStatusChangeOpen(false);
       await loadOrders();
+      await refreshNotifications(); // 알림 목록 새로고침
     } catch (err: any) {
       setError(err.message || '주문 상태 변경에 실패했습니다.');
     } finally {
@@ -179,14 +201,25 @@ const OrderManagePage: React.FC = () => {
         <Typography variant="h4" component="h1">
           주문 관리
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={loadOrders}
-          disabled={loading}
-        >
-          새로고침
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <IconButton
+            color="inherit"
+            onClick={() => setNotificationDrawerOpen(true)}
+            sx={{ position: 'relative' }}
+          >
+            <Badge badgeContent={unreadCount} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={loadOrders}
+            disabled={loading}
+          >
+            새로고침
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -467,10 +500,83 @@ const OrderManagePage: React.FC = () => {
             {loading ? <CircularProgress size={24} /> : '변경'}
           </Button>
         </DialogActions>
-      </Dialog>
-    </Container>
+        </Dialog>
+
+        {/* 알림 Drawer */}
+        <Drawer
+          anchor="right"
+          open={notificationDrawerOpen}
+          onClose={() => setNotificationDrawerOpen(false)}
+        >
+          <Box sx={{ width: 400, p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">알림</Typography>
+              <IconButton onClick={() => setNotificationDrawerOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            {notifications.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                알림이 없습니다.
+              </Typography>
+            ) : (
+              <List>
+                {notifications.map((notification) => (
+                  <ListItem
+                    key={notification.id}
+                    disablePadding
+                    sx={{
+                      bgcolor: notification.isRead ? 'transparent' : 'action.hover',
+                      mb: 1
+                    }}
+                  >
+                    <ListItemButton
+                      onClick={async () => {
+                        if (!notification.isRead) {
+                          await markAsRead(notification.id);
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={notification.message}
+                        secondary={new Date(notification.sentAt).toLocaleString('ko-KR')}
+                      />
+                      {!notification.isRead && (
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: 'primary.main',
+                            ml: 1
+                          }}
+                        />
+                      )}
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+        </Drawer>
+      </Container>
+    );
+  };
+
+const OrderManagePage: React.FC = () => {
+  const { user } = useAuth();
+  
+  if (!user || !user.storeId) {
+    return null;
+  }
+
+  return (
+    <NotificationProvider userType={NotificationUserType.ADMIN} storeId={user.storeId}>
+      <OrderManagePageContent />
+    </NotificationProvider>
   );
 };
-
+  
 export default OrderManagePage;
 

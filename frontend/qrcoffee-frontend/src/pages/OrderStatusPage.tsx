@@ -18,8 +18,10 @@ import {
 import { Home as HomeIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { Order, getOrderStatusText, getPaymentStatusText } from '../types/order';
 import { orderService } from '../services/orderService';
+import { NotificationProvider, useNotification } from '../contexts/NotificationContext';
+import { NotificationUserType } from '../types/notification';
 
-const OrderStatusPage: React.FC = () => {
+const OrderStatusPageContent: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   
@@ -32,6 +34,7 @@ const OrderStatusPage: React.FC = () => {
     if (orderId) {
       loadOrder();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   useEffect(() => {
@@ -51,6 +54,7 @@ const OrderStatusPage: React.FC = () => {
     }, 5000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, order, orderId]);
 
   const loadOrder = async () => {
@@ -256,9 +260,26 @@ const OrderStatusPage: React.FC = () => {
           홈으로
         </Button>
       </Box>
-    </Container>
+      </Container>
+    );
+  };
+
+const OrderStatusPage: React.FC = () => {
+  const { orderId } = useParams<{ orderId: string }>();
+  
+  if (!orderId) {
+    return null;
+  }
+
+  return (
+    <NotificationProvider 
+      userType={NotificationUserType.CUSTOMER} 
+      orderId={parseInt(orderId)}
+    >
+      <OrderStatusPageContent />
+    </NotificationProvider>
   );
 };
-
+  
 export default OrderStatusPage;
 
