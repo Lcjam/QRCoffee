@@ -68,7 +68,8 @@ public class SecurityConfig {
                     "/api/public/seats/**",  // 퍼블릭 좌석 API
                     "/api/public/stores/**", // 고객용 매장/메뉴 조회 API
                     "/api/public/menus/**",  // 고객용 메뉴 조회 (하위 호환성)
-                    "/api/payments/**"       // 고객용 결제 API
+                    "/api/payments/**",      // 고객용 결제 API
+                    "/ws/**"                 // WebSocket 엔드포인트
                 ).permitAll()
                 
                 // 관리자 전용 엔드포인트
