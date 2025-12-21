@@ -45,6 +45,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     long countByStoreIdAndStatus(Long storeId, Order.OrderStatus status);
     
     /**
+     * 매장별 특정 상태가 아닌 주문 개수 (취소 제외 등)
+     */
+    long countByStoreIdAndStatusNot(Long storeId, Order.OrderStatus status);
+    
+    /**
      * 매장별 시간대별 통계 조회 (오늘)
      */
     @Query("SELECT HOUR(o.createdAt) as hour, COUNT(o) as orderCount, COALESCE(SUM(o.totalAmount), 0) as salesAmount " +

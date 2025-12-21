@@ -285,7 +285,7 @@ const CustomerOrderPage: React.FC = () => {
               padding: 1.5
             }}
           >
-            <Badge badgeContent={cart.length} color="error">
+            <Badge badgeContent={cart.reduce((sum, item) => sum + item.quantity, 0)} color="error">
               <ShoppingCartIcon />
             </Badge>
           </IconButton>

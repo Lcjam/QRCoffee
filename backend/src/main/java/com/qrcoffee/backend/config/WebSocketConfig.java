@@ -1,14 +1,25 @@
 package com.qrcoffee.backend.config;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+    private final WebSocketHandshakeInterceptor handshakeInterceptor;
+    
+    @Value("${websocket.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
     
     /**
      * 메시지 브로커 설정
@@ -29,14 +40,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        
         // 고객용 WebSocket 엔드포인트
         registry.addEndpoint("/ws/customer")
-                .setAllowedOriginPatterns("*") // 개발 환경에서는 모든 origin 허용
+                .setAllowedOriginPatterns(origins.toArray(new String[0]))
+                .addInterceptors(handshakeInterceptor)
                 .withSockJS(); // SockJS 지원 (폴백 옵션)
         
         // 관리자용 WebSocket 엔드포인트
         registry.addEndpoint("/ws/admin")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(origins.toArray(new String[0]))
+                .addInterceptors(handshakeInterceptor)
                 .withSockJS();
     }
 }

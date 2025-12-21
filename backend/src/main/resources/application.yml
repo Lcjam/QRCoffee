@@ -72,6 +72,10 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
 
+# WebSocket Configuration
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000}
+
 # File Storage Configuration
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
