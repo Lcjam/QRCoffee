@@ -1,6 +1,8 @@
 package com.qrcoffee.backend.repository;
 
+import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.entity.OrderItem;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,15 +26,15 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     /**
      * 매장별 인기 메뉴 조회 (판매량 기준)
      */
-    @Query("SELECT oi.menuId, m.name, COUNT(DISTINCT oi.orderId) as orderCount, " +
+    @Query("SELECT oi.menuId, oi.menuName, COUNT(DISTINCT oi.order.id) as orderCount, " +
            "SUM(oi.quantity) as totalQuantity, SUM(oi.totalPrice) as totalRevenue " +
            "FROM OrderItem oi " +
-           "JOIN Order o ON oi.orderId = o.id " +
-           "JOIN Menu m ON oi.menuId = m.id " +
-           "WHERE o.storeId = :storeId AND o.status != 'CANCELLED' " +
-           "GROUP BY oi.menuId, m.name " +
-           "ORDER BY totalQuantity DESC, orderCount DESC " +
-           "LIMIT :limit")
-    List<Object[]> findPopularMenusByStoreId(@Param("storeId") Long storeId, @Param("limit") int limit);
+           "JOIN oi.order o " +
+           "WHERE o.storeId = :storeId AND o.status != :cancelledStatus " +
+           "GROUP BY oi.menuId, oi.menuName " +
+           "ORDER BY totalQuantity DESC, orderCount DESC")
+    List<Object[]> findPopularMenusByStoreId(@Param("storeId") Long storeId, 
+                                             @Param("cancelledStatus") Order.OrderStatus cancelledStatus,
+                                             Pageable pageable);
 }
 

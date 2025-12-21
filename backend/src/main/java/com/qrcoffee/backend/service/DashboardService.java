@@ -8,8 +8,12 @@ import com.qrcoffee.backend.repository.OrderRepository;
 import com.qrcoffee.backend.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static com.qrcoffee.backend.entity.Order.OrderStatus.CANCELLED;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -132,7 +136,9 @@ public class DashboardService {
      * 인기 메뉴 조회
      */
     public List<DashboardStatsResponse.PopularMenu> getPopularMenus(Long storeId, int limit) {
-        List<Object[]> results = orderItemRepository.findPopularMenusByStoreId(storeId, limit);
+        Pageable pageable = PageRequest.of(0, limit);
+        List<Object[]> results = orderItemRepository.findPopularMenusByStoreId(
+                storeId, Order.OrderStatus.CANCELLED, pageable);
         
         return results.stream()
                 .map(result -> {
