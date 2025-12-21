@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Container,
-  Paper,
+  Card,
   TextField,
   Button,
   Typography,
@@ -54,26 +54,50 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" sx={{
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
       <Box
         sx={{
-          marginTop: 8,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          width: '100%',
         }}
       >
-        <Paper
-          elevation={3}
+        <Card
           sx={{
-            padding: 4,
+            p: 5,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             width: '100%',
+            overflow: 'visible' // For potential decorative elements
           }}
         >
-          <Typography component="h1" variant="h4" sx={{ mb: 3 }}>
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6C5DD3 0%, #A098F5 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2,
+              boxShadow: '0 8px 16px rgba(108, 93, 211, 0.24)'
+            }}
+          >
+            <Typography variant="h4" color="white" sx={{ fontWeight: 'bold' }}>Q</Typography>
+          </Box>
+
+          <Typography component="h1" variant="h5" sx={{ mb: 1, fontWeight: 700 }}>
+            Welcome Back
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
             QR Coffee 관리자 로그인
           </Typography>
 
@@ -89,7 +113,7 @@ const LoginPage: React.FC = () => {
               required
               fullWidth
               id="email"
-              label="이메일"
+              label="이메일 주소"
               name="email"
               type="email"
               autoComplete="email"
@@ -97,6 +121,7 @@ const LoginPage: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               disabled={isLoading}
+              variant="outlined"
             />
             <TextField
               margin="normal"
@@ -110,22 +135,24 @@ const LoginPage: React.FC = () => {
               value={formData.password}
               onChange={handleChange}
               disabled={isLoading}
+              variant="outlined"
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, height: 48 }}
+              size="large"
+              sx={{ mt: 4, mb: 2 }}
               disabled={isLoading}
             >
               {isLoading ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                '로그인'
+                '로그인하기'
               )}
             </Button>
             <Box textAlign="center">
-              <Typography variant="body2" sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
                 계정이 없으신가요?{' '}
                 <Link
                   to="/signup"
@@ -138,7 +165,7 @@ const LoginPage: React.FC = () => {
                     component="span"
                     variant="subtitle2"
                     color="primary"
-                    sx={{ fontWeight: 'bold' }}
+                    sx={{ fontWeight: 'bold', cursor: 'pointer' }}
                   >
                     회원가입
                   </Typography>
@@ -146,7 +173,7 @@ const LoginPage: React.FC = () => {
               </Typography>
             </Box>
           </Box>
-        </Paper>
+        </Card>
       </Box>
     </Container>
   );
