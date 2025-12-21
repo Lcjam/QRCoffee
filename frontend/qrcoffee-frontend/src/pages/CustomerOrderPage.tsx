@@ -202,13 +202,31 @@ const CustomerOrderPage: React.FC = () => {
         }}
       >
         <Toolbar>
-          <IconButton edge="start" onClick={() => navigate('/')} sx={{ mr: 2, color: 'text.primary' }}>
+          <IconButton 
+            edge="start" 
+            onClick={() => navigate('/')} 
+            sx={{ 
+              mr: 2, 
+              color: 'text.primary',
+              minWidth: 44,
+              minHeight: 44,
+              padding: 1.5
+            }}
+          >
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'text.primary', fontWeight: 'bold' }}>
             {seat?.seatNumber ? `Table ${seat.seatNumber}` : 'Menu'}
           </Typography>
-          <IconButton onClick={() => setCartOpen(true)} sx={{ color: 'primary.main' }}>
+          <IconButton 
+            onClick={() => setCartOpen(true)} 
+            sx={{ 
+              color: 'primary.main',
+              minWidth: 44,
+              minHeight: 44,
+              padding: 1.5
+            }}
+          >
             <Badge badgeContent={cart.length} color="error">
               <ShoppingCartIcon />
             </Badge>
@@ -285,6 +303,7 @@ const CustomerOrderPage: React.FC = () => {
                     component="img"
                     image={menu.imageUrl}
                     alt={menu.name}
+                    loading="lazy"
                     sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
@@ -305,7 +324,23 @@ const CustomerOrderPage: React.FC = () => {
                   <Typography variant="h6" color="primary.main" sx={{ fontWeight: 800 }}>
                     {Number(menu.price).toLocaleString()}
                   </Typography>
-                  <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(108, 93, 211, 0.4)' }}>
+                  <Box 
+                    sx={{ 
+                      width: 44, 
+                      height: 44, 
+                      borderRadius: '50%', 
+                      bgcolor: 'primary.main', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      boxShadow: '0 4px 10px rgba(108, 93, 211, 0.4)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s',
+                      '&:active': {
+                        transform: 'scale(0.95)'
+                      }
+                    }}
+                  >
                     <AddIcon sx={{ color: 'white', fontSize: 20 }} />
                   </Box>
                 </Box>
@@ -365,7 +400,15 @@ const CustomerOrderPage: React.FC = () => {
                   <ListItem
                     key={item.menuId}
                     secondaryAction={
-                      <IconButton edge="end" onClick={() => removeFromCart(item.menuId)}>
+                      <IconButton 
+                        edge="end" 
+                        onClick={() => removeFromCart(item.menuId)}
+                        sx={{
+                          minWidth: 44,
+                          minHeight: 44,
+                          padding: 1
+                        }}
+                      >
                         <DeleteIcon />
                       </IconButton>
                     }
@@ -376,8 +419,12 @@ const CustomerOrderPage: React.FC = () => {
                     />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
                       <IconButton
-                        size="small"
                         onClick={() => updateCartQuantity(item.menuId, item.quantity - 1)}
+                        sx={{
+                          minWidth: 44,
+                          minHeight: 44,
+                          padding: 1
+                        }}
                       >
                         <RemoveIcon />
                       </IconButton>
@@ -385,8 +432,12 @@ const CustomerOrderPage: React.FC = () => {
                         {item.quantity}
                       </Typography>
                       <IconButton
-                        size="small"
                         onClick={() => updateCartQuantity(item.menuId, item.quantity + 1)}
+                        sx={{
+                          minWidth: 44,
+                          minHeight: 44,
+                          padding: 1
+                        }}
                       >
                         <AddIcon />
                       </IconButton>
@@ -408,6 +459,9 @@ const CustomerOrderPage: React.FC = () => {
                   multiline
                   rows={2}
                   placeholder="예: 얼음 적게, 뜨거운 물 추가 등"
+                  inputProps={{
+                    style: { fontSize: '16px' } // iOS 줌 방지
+                  }}
                 />
               </Paper>
 
@@ -430,6 +484,12 @@ const CustomerOrderPage: React.FC = () => {
                   size="large"
                   onClick={handleOrder}
                   disabled={cart.length === 0}
+                  sx={{
+                    minHeight: 48,
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    py: 1.5
+                  }}
                 >
                   주문하기
                 </Button>
