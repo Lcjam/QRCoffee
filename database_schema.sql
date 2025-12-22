@@ -145,6 +145,7 @@ CREATE TABLE orders (
     payment_status ENUM('PENDING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED') 
                    DEFAULT 'PENDING' COMMENT '결제 상태',
     customer_request TEXT COMMENT '고객 요청사항',
+    access_token VARCHAR(64) UNIQUE NOT NULL COMMENT '주문 접근 토큰 (소유권 검증용)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
@@ -156,7 +157,8 @@ CREATE TABLE orders (
     INDEX idx_orders_status (status),
     INDEX idx_orders_payment_status (payment_status),
     INDEX idx_orders_created (created_at),
-    INDEX idx_orders_number (order_number)
+    INDEX idx_orders_number (order_number),
+    INDEX idx_orders_access_token (access_token)
 ) ENGINE=InnoDB COMMENT='주문 관리';
 
 -- 주문 상세 테이블

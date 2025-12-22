@@ -10,7 +10,14 @@ export const orderService = {
       const response = await api.post<Order>('/orders', request);
       
       if (response.data.success && response.data.data) {
-        return response.data.data;
+        const order = response.data.data;
+        
+        // 주문 접근 토큰을 localStorage에 저장 (소유권 검증용)
+        if (order.accessToken) {
+          localStorage.setItem(`orderToken_${order.id}`, order.accessToken);
+        }
+        
+        return order;
       } else {
         throw new Error(response.data.message || '주문 생성에 실패했습니다.');
       }
@@ -26,11 +33,15 @@ export const orderService = {
   },
 
   /**
-   * 주문 조회 (고객용)
+   * 주문 조회 (고객용) - 접근 토큰 검증 포함
    */
   async getOrder(orderId: number): Promise<Order> {
     try {
-      const response = await api.get<Order>(`/orders/${orderId}`);
+      // localStorage에서 접근 토큰 가져오기
+      const token = localStorage.getItem(`orderToken_${orderId}`);
+      const url = token ? `/orders/${orderId}?token=${encodeURIComponent(token)}` : `/orders/${orderId}`;
+      
+      const response = await api.get<Order>(url);
       
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -49,14 +60,27 @@ export const orderService = {
   },
 
   /**
-   * 주문 번호로 조회 (고객용)
+   * 주문 번호로 조회 (고객용) - 접근 토큰 검증 포함
    */
-  async getOrderByNumber(orderNumber: string): Promise<Order> {
+  async getOrderByNumber(orderNumber: string, orderId?: number): Promise<Order> {
     try {
-      const response = await api.get<Order>(`/orders/number/${orderNumber}`);
+      // orderId가 제공되면 해당 주문의 토큰 사용, 없으면 토큰 없이 시도
+      const token = orderId ? localStorage.getItem(`orderToken_${orderId}`) : null;
+      const url = token 
+        ? `/orders/number/${orderNumber}?token=${encodeURIComponent(token)}`
+        : `/orders/number/${orderNumber}`;
+      
+      const response = await api.get<Order>(url);
       
       if (response.data.success && response.data.data) {
-        return response.data.data;
+        const order = response.data.data;
+        
+        // 응답에 accessToken이 있으면 저장 (주문 번호로 조회한 경우)
+        if (order.accessToken && order.id) {
+          localStorage.setItem(`orderToken_${order.id}`, order.accessToken);
+        }
+        
+        return order;
       } else {
         throw new Error(response.data.message || '주문 정보를 가져올 수 없습니다.');
       }
@@ -72,11 +96,15 @@ export const orderService = {
   },
 
   /**
-   * 주문 취소 (고객용)
+   * 주문 취소 (고객용) - 접근 토큰 검증 포함
    */
   async cancelOrder(orderId: number): Promise<Order> {
     try {
-      const response = await api.delete<Order>(`/orders/${orderId}`);
+      // localStorage에서 접근 토큰 가져오기
+      const token = localStorage.getItem(`orderToken_${orderId}`);
+      const url = token ? `/orders/${orderId}?token=${encodeURIComponent(token)}` : `/orders/${orderId}`;
+      
+      const response = await api.delete<Order>(url);
       
       if (response.data.success && response.data.data) {
         return response.data.data;

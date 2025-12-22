@@ -21,6 +21,7 @@ export interface Order {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   customerRequest?: string;
+  accessToken?: string; // 주문 접근 토큰 (소유권 검증용)
   orderItems: OrderItem[];
   createdAt: string;
   updatedAt: string;

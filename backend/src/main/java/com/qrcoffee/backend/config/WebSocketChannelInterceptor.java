@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.config;
 
+import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,9 +12,11 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * WebSocket Rate Limiting 및 연결 관리 인터셉터
@@ -130,17 +133,21 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
                 String orderIdStr = destination.substring("/topic/customer/".length());
                 Long orderId = Long.parseLong(orderIdStr);
                 
-                // orderId로 주문 조회하여 존재 여부 확인
-                // 실제 소유권 검증은 주문 생성 시 제공된 QR 코드나 세션 정보로 확인해야 함
-                // 여기서는 최소한 주문이 존재하는지만 확인
-                boolean orderExists = orderRepository.findById(orderId).isPresent();
-                if (!orderExists) {
+                // 주문 조회
+                Order order = orderRepository.findById(orderId).orElse(null);
+                if (order == null) {
                     log.warn("고객 채널 구독 거부: 주문이 존재하지 않음. OrderId: {}", orderId);
                     return false;
                 }
                 
-                // TODO: 실제로는 주문 생성 시 제공된 세션 ID나 토큰으로 소유권 검증 필요
-                // 현재는 존재 여부만 확인 (추가 보안 강화 필요)
+                // 접근 토큰 검증 (STOMP 헤더에서 토큰 추출)
+                String providedToken = extractAccessTokenFromHeaders(accessor);
+                if (providedToken == null || !order.getAccessToken().equals(providedToken)) {
+                    log.warn("고객 채널 구독 거부: 접근 토큰 불일치 또는 없음. OrderId: {}", orderId);
+                    return false;
+                }
+                
+                log.debug("고객 채널 구독 허용: OrderId={}", orderId);
                 return true;
             } catch (NumberFormatException e) {
                 log.warn("고객 채널 구독 거부: 잘못된 orderId 형식. Destination: {}", destination);
@@ -196,19 +203,44 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
     
     /**
      * 주기적으로 오래된 연결 정보 정리 (메모리 누수 방지)
+     * 부수 효과를 제거하고 경쟁 상태를 방지하기 위해 읽기와 쓰기를 분리
      */
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = CLEANUP_INTERVAL_MS)
     public void cleanupOldConnections() {
         long currentTime = System.currentTimeMillis();
-        connectionCounts.entrySet().removeIf(entry -> {
-            Long lastTime = lastConnectionTime.get(entry.getKey());
-            if (lastTime != null && (currentTime - lastTime) > CONNECTION_TIMEOUT_MS) {
-                lastConnectionTime.remove(entry.getKey());
-                log.debug("오래된 연결 정보 정리: IP={}", entry.getKey());
-                return true;
-            }
-            return false;
-        });
+        
+        // 1단계: 제거할 IP 목록 수집 (읽기만 수행, 부수 효과 없음)
+        List<String> ipsToRemove = connectionCounts.entrySet().stream()
+                .filter(entry -> {
+                    Long lastTime = lastConnectionTime.get(entry.getKey());
+                    return lastTime != null && 
+                           (currentTime - lastTime) > CONNECTION_TIMEOUT_MS;
+                })
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        
+        // 2단계: 수집된 IP들을 각 맵에서 제거 (명확한 쓰기 작업)
+        for (String ip : ipsToRemove) {
+            connectionCounts.remove(ip);
+            lastConnectionTime.remove(ip);
+            log.debug("오래된 연결 정보 정리: IP={}", ip);
+        }
+        
+        if (!ipsToRemove.isEmpty()) {
+            log.info("오래된 연결 정보 정리 완료: {}개 IP 제거", ipsToRemove.size());
+        }
+    }
+    
+    /**
+     * STOMP 헤더에서 접근 토큰 추출
+     */
+    private String extractAccessTokenFromHeaders(StompHeaderAccessor accessor) {
+        // STOMP 헤더에서 accessToken 추출
+        List<String> tokens = accessor.getNativeHeader("accessToken");
+        if (tokens != null && !tokens.isEmpty()) {
+            return tokens.get(0);
+        }
+        return null;
     }
 }
 
