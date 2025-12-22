@@ -8,11 +8,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
+@Validated
 public class DashboardController extends BaseController {
     
     private final DashboardService dashboardService;
@@ -75,7 +77,10 @@ public class DashboardController extends BaseController {
     @GetMapping("/stats/popular-menus")
     @PreAuthorize("hasRole('MASTER') or hasRole('SUB')")
     public ResponseEntity<ApiResponse<java.util.List<DashboardStatsResponse.PopularMenu>>> getPopularMenus(
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "10") 
+            @jakarta.validation.constraints.Min(value = 1, message = "limit은 최소 1 이상이어야 합니다")
+            @jakarta.validation.constraints.Max(value = 100, message = "limit은 최대 100 이하여야 합니다")
+            int limit,
             HttpServletRequest request) {
         Long storeId = getStoreId(request);
         

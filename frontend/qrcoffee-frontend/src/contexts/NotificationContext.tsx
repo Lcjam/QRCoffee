@@ -4,6 +4,7 @@ import { websocketService } from '../services/websocketService';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from './AuthContext';
 import { Snackbar, Alert } from '@mui/material';
+import DOMPurify from 'dompurify';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -70,8 +71,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       setUnreadCount((prev) => prev + 1);
     }
     
-    // 스낵바로 알림 표시
-    setSnackbarMessage(notification.message);
+    // 스낵바로 알림 표시 (XSS 방지를 위해 DOMPurify로 sanitize)
+    const sanitizedMessage = DOMPurify.sanitize(notification.message, {
+      ALLOWED_TAGS: [], // 모든 HTML 태그 제거
+      ALLOWED_ATTR: []  // 모든 속성 제거
+    });
+    setSnackbarMessage(sanitizedMessage);
     setSnackbarOpen(true);
   }, []);
 

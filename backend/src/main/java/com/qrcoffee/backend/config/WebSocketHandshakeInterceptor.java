@@ -167,22 +167,18 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     
     /**
      * HTTP 요청에서 JWT 토큰 추출
-     * STOMP connectHeaders의 Authorization 헤더에서 토큰을 가져옴
-     * 보안상 query parameter는 사용하지 않음 (로그, 브라우저 히스토리 노출 방지)
+     * STOMP connectHeaders의 Authorization 헤더에서만 토큰을 가져옴
+     * 보안상 query parameter는 완전히 제거 (PCI-DSS 준수, 로그/브라우저 히스토리 노출 방지)
      */
     private String extractTokenFromRequest(HttpServletRequest request) {
-        // Authorization 헤더에서 토큰 확인 (STOMP connectHeaders 사용)
+        // Authorization 헤더에서만 토큰 확인 (STOMP connectHeaders 사용)
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
         
-        // 하위 호환성을 위해 query parameter도 확인 (deprecated, 제거 예정)
-        String token = request.getParameter("token");
-        if (StringUtils.hasText(token)) {
-            log.warn("WebSocket 토큰이 query parameter로 전달됨. connectHeaders 사용을 권장합니다.");
-            return token;
-        }
+        // Query parameter는 보안상 완전히 제거됨
+        // PCI-DSS 및 보안 모범 사례 준수
         
         return null;
     }
