@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Container,
   Typography,
@@ -539,7 +540,10 @@ const OrderManagePageContent: React.FC = () => {
                       }}
                     >
                       <ListItemText
-                        primary={notification.message}
+                        primary={DOMPurify.sanitize(notification.message, {
+                          ALLOWED_TAGS: [],
+                          ALLOWED_ATTR: []
+                        })}
                         secondary={new Date(notification.sentAt).toLocaleString('ko-KR')}
                       />
                       {!notification.isRead && (

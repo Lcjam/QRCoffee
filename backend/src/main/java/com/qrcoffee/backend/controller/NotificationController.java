@@ -54,8 +54,13 @@ public class NotificationController extends BaseController {
      * 알림 읽음 처리
      */
     @PutMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<Notification>> markAsRead(@PathVariable Long id) {
-        Notification notification = notificationService.markAsRead(id);
+    public ResponseEntity<ApiResponse<Notification>> markAsRead(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        Long storeId = getStoreId(request);
+        
+        // storeId 검증 추가 (권한 검증)
+        Notification notification = notificationService.markAsRead(id, storeId);
         return ResponseEntity.ok(ApiResponse.success(notification));
     }
 }

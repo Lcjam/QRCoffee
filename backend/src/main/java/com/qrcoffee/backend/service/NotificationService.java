@@ -151,8 +151,27 @@ public class NotificationService {
     }
     
     /**
-     * 알림 읽음 처리
+     * 알림 읽음 처리 (storeId 검증 포함)
      */
+    @Transactional
+    public Notification markAsRead(Long notificationId, Long storeId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new BusinessException("알림을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        
+        // storeId 검증 (권한 검증)
+        if (!notification.getStoreId().equals(storeId)) {
+            throw new BusinessException("해당 알림에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        
+        notification.markAsRead();
+        return notificationRepository.save(notification);
+    }
+    
+    /**
+     * 알림 읽음 처리 (하위 호환성, storeId 검증 없음 - deprecated)
+     * 주의: 이 메서드는 보안상 위험하므로 사용하지 않는 것을 권장합니다.
+     */
+    @Deprecated
     @Transactional
     public Notification markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
