@@ -88,7 +88,7 @@ export class WebSocketService {
   }
 
   /**
-   * 고객용 WebSocket 연결
+   * 고객용 WebSocket 연결 - 주문 접근 토큰 검증 포함
    */
   connectCustomer(orderId: number, onNotification: (notification: Notification) => void): void {
     // 이미 연결되어 있으면 무시
@@ -105,13 +105,21 @@ export class WebSocketService {
     
     this.isConnecting = true;
 
-    // 고객용 WebSocket은 토큰이 선택적 (로그인하지 않은 고객도 사용 가능)
-    const token = getAuthToken();
+    // 주문 접근 토큰 가져오기 (localStorage에서)
+    const orderAccessToken = localStorage.getItem(`orderToken_${orderId}`);
+    if (!orderAccessToken) {
+      console.error('WebSocket 연결 실패: 주문 접근 토큰이 없습니다. orderId:', orderId);
+      this.isConnecting = false;
+      return;
+    }
+
+    // 고객용 WebSocket은 JWT 토큰이 선택적 (로그인하지 않은 고객도 사용 가능)
+    const authToken = getAuthToken();
     const socket = new SockJS(`${API_BASE_URL}/ws/customer`);
     this.client = new Client({
       webSocketFactory: () => socket,
-      connectHeaders: token ? {
-        Authorization: `Bearer ${token}`
+      connectHeaders: authToken ? {
+        Authorization: `Bearer ${authToken}`
       } : {},
       reconnectDelay: this.reconnectDelay,
       heartbeatIncoming: 4000,
@@ -122,16 +130,22 @@ export class WebSocketService {
         this.isConnecting = false;
         this.reconnectAttempts = 0;
 
-        // 고객용 토픽 구독
-        this.client?.subscribe(`/topic/customer/${orderId}`, (message: IMessage) => {
-          try {
-            const notification: Notification = JSON.parse(message.body);
-            console.log('📨 Received customer notification:', notification);
-            onNotification(notification);
-          } catch (error) {
-            console.error('Failed to parse notification:', error);
+        // 고객용 토픽 구독 (주문 접근 토큰을 헤더로 전달)
+        this.client?.subscribe(
+          `/topic/customer/${orderId}`, 
+          (message: IMessage) => {
+            try {
+              const notification: Notification = JSON.parse(message.body);
+              console.log('📨 Received customer notification:', notification);
+              onNotification(notification);
+            } catch (error) {
+              console.error('Failed to parse notification:', error);
+            }
+          },
+          {
+            accessToken: orderAccessToken
           }
-        });
+        );
       },
       onStompError: (frame) => {
         console.error('STOMP error:', frame);

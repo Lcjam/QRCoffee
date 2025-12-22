@@ -37,37 +37,46 @@ public class OrderController extends BaseController {
     }
     
     /**
-     * 주문 조회 (고객용)
+     * 주문 조회 (고객용) - 접근 토큰 검증 포함
      */
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrder(
+            @PathVariable Long orderId,
+            @RequestParam(required = false) String token) {
         log.info("주문 조회 요청: orderId={}", orderId);
         
-        OrderResponse orderResponse = orderService.getOrder(orderId);
+        // 접근 토큰 검증 (소유권 확인)
+        OrderResponse orderResponse = orderService.getOrder(orderId, token);
         
         return success("주문 정보를 조회했습니다.", orderResponse);
     }
     
     /**
-     * 주문 번호로 조회 (고객용)
+     * 주문 번호로 조회 (고객용) - 접근 토큰 검증 포함
      */
     @GetMapping("/number/{orderNumber}")
-    public ResponseEntity<ApiResponse<OrderResponse>> getOrderByNumber(@PathVariable String orderNumber) {
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderByNumber(
+            @PathVariable String orderNumber,
+            @RequestParam(required = false) String token) {
         log.info("주문 번호로 조회 요청: orderNumber={}", orderNumber);
         
-        OrderResponse orderResponse = orderService.getOrderByNumber(orderNumber);
+        // 접근 토큰 검증 (소유권 확인)
+        OrderResponse orderResponse = orderService.getOrderByNumber(orderNumber, token);
         
         return success("주문 정보를 조회했습니다.", orderResponse);
     }
     
     /**
-     * 주문 취소 (고객용)
+     * 주문 취소 (고객용) - 접근 토큰 검증 포함
      */
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @PathVariable Long orderId,
+            @RequestParam(required = false) String token) {
         log.info("주문 취소 요청: orderId={}", orderId);
         
-        OrderResponse orderResponse = orderService.cancelOrder(orderId);
+        // 접근 토큰 검증 (소유권 확인)
+        OrderResponse orderResponse = orderService.cancelOrder(orderId, token);
         
         return success("주문이 취소되었습니다.", orderResponse);
     }

@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
@@ -52,6 +53,9 @@ public class Order {
     @Column(name = "customer_request", columnDefinition = "TEXT")
     private String customerRequest;
     
+    @Column(name = "access_token", unique = true, nullable = false, length = 64)
+    private String accessToken; // 주문 접근용 고유 토큰 (소유권 검증용)
+    
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -63,6 +67,18 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
+    
+    /**
+     * 주문 생성 시 접근 토큰 자동 생성
+     */
+    @PrePersist
+    public void generateAccessToken() {
+        if (this.accessToken == null) {
+            // UUID를 사용하여 고유한 토큰 생성 (하이픈 제거, 64자리)
+            this.accessToken = UUID.randomUUID().toString().replace("-", "") + 
+                             UUID.randomUUID().toString().replace("-", "");
+        }
+    }
     
     public enum OrderStatus {
         PENDING,      // 주문접수

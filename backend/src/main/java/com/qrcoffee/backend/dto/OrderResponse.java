@@ -26,6 +26,7 @@ public class OrderResponse {
     private String status;
     private String paymentStatus;
     private String customerRequest;
+    private String accessToken; // 주문 접근 토큰 (소유권 검증용)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
@@ -50,6 +51,7 @@ public class OrderResponse {
                 .status(order.getStatus().name())
                 .paymentStatus(order.getPaymentStatus().name())
                 .customerRequest(order.getCustomerRequest())
+                .accessToken(order.getAccessToken())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .orderItems(orderItemResponses)
