@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.qrcoffee.backend.entity.Order.OrderStatus.CANCELLED;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -63,11 +62,11 @@ public class DashboardService {
         // 단일 쿼리로 모든 기본 통계 조회
         Object[] result = orderRepository.findBasicStatsByStoreId(storeId, today);
         
-        long todayOrderCount = ((Number) result[0]).longValue();
-        long pendingOrderCount = ((Number) result[1]).longValue();
-        BigDecimal todaySalesAmount = result[2] != null ? 
-                new BigDecimal(result[2].toString()) : BigDecimal.ZERO;
-        long totalOrderCount = ((Number) result[3]).longValue();
+        // 안전한 타입 변환 (null 체크 및 타입 확인)
+        long todayOrderCount = extractLongValue(result, 0);
+        long pendingOrderCount = extractLongValue(result, 1);
+        BigDecimal todaySalesAmount = extractBigDecimalValue(result, 2);
+        long totalOrderCount = extractLongValue(result, 3);
         
         return DashboardStatsResponse.BasicStats.builder()
                 .todayOrderCount(todayOrderCount)
@@ -75,6 +74,69 @@ public class DashboardService {
                 .todaySalesAmount(todaySalesAmount.longValue())
                 .totalOrderCount(totalOrderCount)
                 .build();
+    }
+    
+    /**
+     * Object[]에서 Long 값 안전하게 추출
+     */
+    private long extractLongValue(Object[] result, int index) {
+        if (result == null || index >= result.length || result[index] == null) {
+            return 0L;
+        }
+        Object value = result[index];
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            log.warn("Long 값 추출 실패: index={}, value={}", index, value);
+            return 0L;
+        }
+    }
+    
+    /**
+     * Object[]에서 BigDecimal 값 안전하게 추출
+     */
+    private BigDecimal extractBigDecimalValue(Object[] result, int index) {
+        if (result == null || index >= result.length || result[index] == null) {
+            return BigDecimal.ZERO;
+        }
+        Object value = result[index];
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        if (value instanceof Number) {
+            return BigDecimal.valueOf(((Number) value).doubleValue());
+        }
+        try {
+            return new BigDecimal(value.toString());
+        } catch (NumberFormatException e) {
+            log.warn("BigDecimal 값 추출 실패: index={}, value={}", index, value);
+            return BigDecimal.ZERO;
+        }
+    }
+    
+    /**
+     * Object[]에서 Integer 값 안전하게 추출
+     */
+    private Integer extractIntegerValue(Object[] result, int index) {
+        if (result == null || index >= result.length || result[index] == null) {
+            return null;
+        }
+        Object value = result[index];
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            log.warn("Integer 값 추출 실패: index={}, value={}", index, value);
+            return null;
+        }
     }
     
     /**
@@ -122,11 +184,11 @@ public class DashboardService {
         Object[] result = orderRepository.findOrderStatsByStoreId(storeId);
         
         return DashboardStatsResponse.OrderStats.builder()
-                .pendingCount(((Number) result[0]).longValue())
-                .preparingCount(((Number) result[1]).longValue())
-                .completedCount(((Number) result[2]).longValue())
-                .pickedUpCount(((Number) result[3]).longValue())
-                .cancelledCount(((Number) result[4]).longValue())
+                .pendingCount(extractLongValue(result, 0))
+                .preparingCount(extractLongValue(result, 1))
+                .completedCount(extractLongValue(result, 2))
+                .pickedUpCount(extractLongValue(result, 3))
+                .cancelledCount(extractLongValue(result, 4))
                 .build();
     }
     
@@ -139,13 +201,13 @@ public class DashboardService {
                 storeId, Order.OrderStatus.CANCELLED, pageable);
         
         return results.stream()
+                .filter(result -> result != null && result.length >= 5)
                 .map(result -> {
-                    Long menuId = ((Number) result[0]).longValue();
-                    String menuName = (String) result[1];
-                    Long orderCount = ((Number) result[2]).longValue();
-                    Long totalQuantity = ((Number) result[3]).longValue();
-                    BigDecimal totalRevenue = result[4] != null ? 
-                            new BigDecimal(result[4].toString()) : BigDecimal.ZERO;
+                    Long menuId = extractLongValue(result, 0);
+                    String menuName = result[1] != null ? result[1].toString() : "";
+                    Long orderCount = extractLongValue(result, 2);
+                    Long totalQuantity = extractLongValue(result, 3);
+                    BigDecimal totalRevenue = extractBigDecimalValue(result, 4);
                     
                     return DashboardStatsResponse.PopularMenu.builder()
                             .menuId(menuId)
@@ -177,12 +239,14 @@ public class DashboardService {
         
         // 실제 데이터로 채우기
         for (Object[] result : results) {
-            Integer hour = ((Number) result[0]).intValue();
-            Long orderCount = ((Number) result[1]).longValue();
-            BigDecimal salesAmount = result[2] != null ? 
-                    new BigDecimal(result[2].toString()) : BigDecimal.ZERO;
+            if (result == null || result.length < 3) {
+                continue;
+            }
+            Integer hour = extractIntegerValue(result, 0);
+            Long orderCount = extractLongValue(result, 1);
+            BigDecimal salesAmount = extractBigDecimalValue(result, 2);
             
-            if (hour >= 0 && hour < 24) {
+            if (hour != null && hour >= 0 && hour < 24) {
                 hourlyStats.set(hour, DashboardStatsResponse.HourlyStats.builder()
                         .hour(hour)
                         .orderCount(orderCount)
@@ -243,9 +307,8 @@ public class DashboardService {
                             } else {
                                 dateStr = dateObj.toString();
                             }
-                            Long orderCount = ((Number) result[1]).longValue();
-                            BigDecimal amount = result[2] != null ? 
-                                    new BigDecimal(result[2].toString()) : BigDecimal.ZERO;
+                            Long orderCount = extractLongValue(result, 1);
+                            BigDecimal amount = extractBigDecimalValue(result, 2);
                             return DashboardStatsResponse.DailySales.builder()
                                     .date(dateStr)
                                     .amount(amount)

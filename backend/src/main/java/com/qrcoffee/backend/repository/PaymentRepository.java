@@ -30,9 +30,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     /**
      * 매장별 기간 내 완료된 결제 조회 (매출 통계용)
+     * Payment와 Order 간 관계가 없으므로 orderId를 통해 조회
      */
-    @Query("SELECT p FROM Payment p JOIN Order o ON p.orderId = o.id " +
-           "WHERE o.storeId = :storeId AND p.status = 'DONE' " +
+    @Query(value = "SELECT p FROM Payment p " +
+           "WHERE p.orderId IN (SELECT o.id FROM Order o WHERE o.storeId = :storeId) " +
+           "AND p.status = 'DONE' " +
            "AND p.approvedAt >= :startDate AND p.approvedAt < :endDate " +
            "ORDER BY p.approvedAt DESC")
     List<Payment> findByStoreIdAndDateRange(
@@ -47,7 +49,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      */
     @Query(value = "SELECT DATE(p.approved_at) as date, " +
            "COUNT(p.id) as orderCount, " +
-           "COALESCE(SUM(p.total_amount), 0) as amount " +
+           "COALESCE(SUM(p.amount), 0) as amount " +
            "FROM payments p JOIN orders o ON p.order_id = o.id " +
            "WHERE o.store_id = :storeId AND p.status = 'DONE' " +
            "AND p.approved_at >= :startDate AND p.approved_at < :endDate " +

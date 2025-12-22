@@ -66,7 +66,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query(value = "SELECT " +
            "COUNT(CASE WHEN DATE(o.created_at) = DATE(:today) THEN 1 END) as todayOrderCount, " +
            "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END) as pendingOrderCount, " +
-           "COALESCE(SUM(CASE WHEN DATE(p.approved_at) = DATE(:today) AND p.status = 'DONE' THEN p.total_amount ELSE 0 END), 0) as todaySalesAmount, " +
+           "COALESCE(SUM(CASE WHEN DATE(p.approved_at) = DATE(:today) AND p.status = 'DONE' THEN p.amount ELSE 0 END), 0) as todaySalesAmount, " +
            "COUNT(CASE WHEN o.status != 'CANCELLED' THEN 1 END) as totalOrderCount " +
            "FROM orders o " +
            "LEFT JOIN payments p ON o.id = p.order_id " +
