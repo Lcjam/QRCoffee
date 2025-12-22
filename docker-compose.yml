@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: qrcoffee-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ckdwo4467@}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-qr_coffee_order}
+      MYSQL_USER: ${MYSQL_USER:-qrcoffee}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-qrcoffee123}
+      TZ: Asia/Seoul
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/src/main/resources/db/migration:/docker-entrypoint-initdb.d/02-migration:ro
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_allowed_packet=256M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-ckdwo4467@}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qrcoffee-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  qrcoffee-network:
+    driver: bridge

@@ -39,9 +39,25 @@ QR코드 기반 무인 카페 주문 시스템
 
 - **Java 21** 이상
 - **Node.js 18** 이상
-- **MySQL 8.0** 이상
+- **Docker** 및 **Docker Compose** (MySQL용, 권장)
+  또는 **MySQL 8.0** 이상 (로컬 설치)
 
 ### 1. 데이터베이스 설정
+
+#### 방법 1: Docker 사용 (권장) 🐳
+
+```bash
+# Docker로 MySQL 시작
+chmod +x docker-start.sh
+./docker-start.sh
+
+# 또는 직접 실행
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+Docker를 사용하면 MySQL이 자동으로 시작되고 스키마가 초기화됩니다.
+
+#### 방법 2: 로컬 MySQL 사용
 
 ```bash
 mysql -u root -p < database_schema.sql
@@ -67,11 +83,30 @@ SPRING_PROFILES_ACTIVE=dev
 REACT_APP_API_URL=http://localhost:8080
 ```
 
+### 2. 환경 변수 설정
+
+**프로젝트 루트에 `.env` 파일 생성** (Docker 사용 시 권장):
+
+```bash
+# .env.example을 복사하여 .env 생성
+cp .env.example .env
+
+# 필요시 .env 파일 수정
+nano .env
+```
+
+`.env` 파일은 프로젝트 루트에 위치해야 하며, Docker Compose가 자동으로 인식합니다.
+
+> 💡 상세한 환경 변수 설정은 `docs/ENV_SETUP.md`를 참고하세요.
+
 ### 3. 프로젝트 실행
 
 #### 방법 1: 스크립트 사용 (권장)
 
 ```bash
+# MySQL 시작 (Docker 사용 시)
+./docker-start.sh
+
 # 프로젝트 시작
 chmod +x start.sh
 ./start.sh
@@ -79,6 +114,9 @@ chmod +x start.sh
 # 프로젝트 종료
 chmod +x stop.sh
 ./stop.sh
+
+# MySQL 중지 (Docker 사용 시)
+./docker-stop.sh
 ```
 
 #### 방법 2: 수동 실행
@@ -129,8 +167,13 @@ QRCoffee/
 │   │   └── contexts/            # React Context (Auth 등)
 │   └── public/
 ├── database_schema.sql          # 데이터베이스 스키마
+├── docker-compose.yml           # Docker Compose 설정 (프로덕션)
+├── docker-compose.dev.yml       # Docker Compose 설정 (개발용)
+├── docker-start.sh              # Docker MySQL 시작 스크립트
+├── docker-stop.sh               # Docker MySQL 중지 스크립트
 ├── start.sh                     # 프로젝트 시작 스크립트
 ├── stop.sh                      # 프로젝트 종료 스크립트
+├── .env.example                 # 환경 변수 예제 파일
 ├── SETUP_GUIDE.md              # 상세 설정 가이드
 └── README.md                    # 이 파일
 ```

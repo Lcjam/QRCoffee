@@ -4,8 +4,10 @@ spring:
     name: qrcoffee-backend
   
   # Database Configuration
+  # Docker 사용 시: localhost:3307 (호스트 포트)
+  # 로컬 MySQL 사용 시: localhost:3306
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/qr_coffee_order?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    url: ${DB_URL:jdbc:mysql://localhost:3307/qr_coffee_order?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:your_password_here}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -98,7 +100,7 @@ spring:
       on-profile: dev
   
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/qr_coffee_order?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    url: ${DB_URL:jdbc:mysql://localhost:3307/qr_coffee_order?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
     username: ${DEV_DB_USERNAME:root}
     password: ${DEV_DB_PASSWORD:ckdwo4467@}
   
