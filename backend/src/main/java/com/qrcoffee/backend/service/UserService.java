@@ -70,6 +70,7 @@ public class UserService {
                 .phone(request.getPhone())
                 .role(User.Role.MASTER)
                 .storeId(store.getId())
+                .isActive(true) // 명시적으로 활성화 상태 설정
                 .build();
     }
     

@@ -29,7 +29,9 @@ public class ValidationUtils {
      * 사용자 활성화 상태 검증
      */
     public static void validateUserActive(User user) {
-        if (!user.getIsActive()) {
+        // isActive가 null이면 기본값 true로 간주 (기존 데이터 호환성)
+        Boolean isActive = user.getIsActive();
+        if (isActive != null && !isActive) {
             log.warn("비활성화된 계정 접근 시도: {}", user.getEmail());
             throw new BusinessException("비활성화된 계정입니다.", HttpStatus.UNAUTHORIZED);
         }
