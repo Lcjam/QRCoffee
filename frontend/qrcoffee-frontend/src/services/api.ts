@@ -41,11 +41,10 @@ apiClient.interceptors.response.use(
   (error: AxiosError<ErrorResponse>) => {
     console.error(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data);
     
-    // 401 에러 시 로그인 페이지로 리디렉션
+    // 401 에러 시 토큰 제거
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      // window.location.href = '/login';
     }
     
     // 에러 응답을 표준화

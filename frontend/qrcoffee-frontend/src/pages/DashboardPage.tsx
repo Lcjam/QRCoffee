@@ -16,7 +16,9 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Stack
+  Stack,
+  Badge,
+  IconButton
 } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -37,7 +39,6 @@ import { dashboardService } from '../services/dashboardService';
 import { DashboardStats } from '../types/dashboard';
 import { NotificationProvider, useNotification } from '../contexts/NotificationContext';
 import { NotificationUserType } from '../types/notification';
-import { Badge, IconButton } from '@mui/material';
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
 
 // Chart.js 등록
