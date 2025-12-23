@@ -4,31 +4,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
-import java.security.SecureRandom;
 
 @Component
 @Slf4j
 public class QRCodeUtil {
-    
-    private static final SecureRandom random = new SecureRandom();
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     
     /**
      * 고유한 QR코드 UUID 생성
      */
     public String generateQRCode() {
         return UUID.randomUUID().toString();
-    }
-    
-    /**
-     * 짧은 형태의 QR코드 생성 (8자리 영숫자)
-     */
-    public String generateShortQRCode() {
-        StringBuilder sb = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
-            sb.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
-        }
-        return sb.toString();
     }
     
     /**
@@ -47,23 +32,6 @@ public class QRCodeUtil {
             // 짧은 형태 QR코드인지 확인 (8자리 영숫자)
             return qrCode.matches("^[A-Z0-9]{8}$");
         }
-    }
-    
-    /**
-     * QR코드 URL 생성
-     * 예: https://yourdomain.com/order?seat=UUID
-     */
-    public String generateQRCodeUrl(String qrCode, String baseUrl) {
-        if (baseUrl == null || baseUrl.trim().isEmpty()) {
-            baseUrl = "http://localhost:3000"; // 기본 프론트엔드 URL
-        }
-        
-        // 마지막 슬래시 제거
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        
-        return String.format("%s/order?seat=%s", baseUrl, qrCode);
     }
     
     /**
@@ -103,5 +71,15 @@ public class QRCodeUtil {
      */
     public void logQRCodeScan(String qrCode, String userAgent, String ipAddress) {
         log.info("QR코드 스캔 - QR코드: {}, UserAgent: {}, IP: {}", qrCode, userAgent, ipAddress);
+    }
+    
+    /**
+     * QR코드 이미지 URL 생성 (실제 구현은 추후 추가)
+     * 현재는 플레이스홀더 URL 반환
+     */
+    public String generateQRCodeImage(String qrCode) {
+        // TODO: 실제 QR코드 이미지 생성 및 저장 로직 구현
+        // 현재는 플레이스홀더 URL 반환
+        return String.format("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=%s", qrCode);
     }
 } 

@@ -32,6 +32,12 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   
+  # Web Resources Configuration
+  web:
+    resources:
+      # 정적 리소스 자동 매핑 비활성화 (API 경로와 충돌 방지)
+      add-mappings: false
+  
   # Profile Configuration
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
@@ -65,6 +71,10 @@ cors:
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
+
+# WebSocket Configuration
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000}
 
 # File Storage Configuration
 file:

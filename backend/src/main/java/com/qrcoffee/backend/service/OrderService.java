@@ -4,6 +4,7 @@ import com.qrcoffee.backend.dto.OrderRequest;
 import com.qrcoffee.backend.dto.OrderResponse;
 import com.qrcoffee.backend.dto.OrderItemRequest;
 import com.qrcoffee.backend.entity.*;
+import com.qrcoffee.backend.entity.Notification;
 import com.qrcoffee.backend.exception.BusinessException;
 import com.qrcoffee.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,6 +39,8 @@ public class OrderService {
     private final MenuRepository menuRepository;
     private final SeatRepository seatRepository;
     private final StoreRepository storeRepository;
+    private final NotificationService notificationService;
+    private final WebSocketNotificationService webSocketNotificationService;
     
     /**
      * 주문 생성
@@ -60,6 +62,15 @@ public class OrderService {
         
         // 주문 저장
         Order savedOrder = orderRepository.save(order);
+        
+        // 주문 접수 알림 전송 (관리자에게)
+        try {
+            Notification notification = notificationService.sendOrderReceivedNotification(savedOrder.getId());
+            webSocketNotificationService.notifyOrderReceived(savedOrder.getStoreId(), notification);
+        } catch (Exception e) {
+            log.error("주문 접수 알림 전송 실패: orderId={}", savedOrder.getId(), e);
+            // 알림 실패는 주문 생성 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+        }
         
         log.info("주문 생성 완료: orderId={}, orderNumber={}, totalAmount={}", 
                 savedOrder.getId(), savedOrder.getOrderNumber(), savedOrder.getTotalAmount());
@@ -153,24 +164,56 @@ public class OrderService {
     }
     
     /**
-     * 주문 조회 (고객용)
+     * 주문 조회 (고객용) - 접근 토큰 검증 포함
      */
-    public OrderResponse getOrder(Long orderId) {
+    public OrderResponse getOrder(Long orderId, String accessToken) {
         Order order = findOrderById(orderId);
-        Seat seat = findSeatById(order.getSeatId());
         
+        // 접근 토큰 검증 (소유권 확인)
+        if (accessToken == null || !order.getAccessToken().equals(accessToken)) {
+            throw new BusinessException("해당 주문에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        
+        Seat seat = findSeatById(order.getSeatId());
         return OrderResponse.fromWithSeat(order, seat.getSeatNumber());
     }
     
     /**
-     * 주문 번호로 조회
+     * 주문 조회 (고객용) - 하위 호환성 (deprecated)
+     * 보안상 토큰 검증 없이 조회하는 것은 권장하지 않음
      */
+    @Deprecated
+    public OrderResponse getOrder(Long orderId) {
+        Order order = findOrderById(orderId);
+        Seat seat = findSeatById(order.getSeatId());
+        return OrderResponse.fromWithSeat(order, seat.getSeatNumber());
+    }
+    
+    /**
+     * 주문 번호로 조회 - 접근 토큰 검증 포함
+     */
+    public OrderResponse getOrderByNumber(String orderNumber, String accessToken) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new BusinessException("주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        
+        // 접근 토큰 검증 (소유권 확인)
+        if (accessToken == null || !order.getAccessToken().equals(accessToken)) {
+            throw new BusinessException("해당 주문에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        
+        Seat seat = findSeatById(order.getSeatId());
+        return OrderResponse.fromWithSeat(order, seat.getSeatNumber());
+    }
+    
+    /**
+     * 주문 번호로 조회 - 하위 호환성 (deprecated)
+     */
+    @Deprecated
     public OrderResponse getOrderByNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new BusinessException("주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         
         Seat seat = findSeatById(order.getSeatId());
-        
         return OrderResponse.fromWithSeat(order, seat.getSeatNumber());
     }
     
@@ -245,6 +288,25 @@ public class OrderService {
             
             Order updatedOrder = orderRepository.save(order);
             
+            // 주문 상태 변경에 따른 알림 전송
+            try {
+                if (newStatus == Order.OrderStatus.COMPLETED) {
+                    // 제조 완료 알림 (고객에게)
+                    Notification notification = notificationService.sendOrderCompletedNotification(orderId);
+                    webSocketNotificationService.notifyOrderCompleted(orderId, notification);
+                } else if (newStatus == Order.OrderStatus.CANCELLED) {
+                    // 주문 취소 알림 (양방향)
+                    List<Notification> notifications = notificationService.sendOrderCancelledNotification(orderId);
+                    if (notifications.size() >= 2) {
+                        webSocketNotificationService.notifyOrderCancelled(
+                                order.getStoreId(), orderId, notifications.get(0), notifications.get(1));
+                    }
+                }
+            } catch (Exception e) {
+                log.error("주문 상태 변경 알림 전송 실패: orderId={}, status={}", orderId, newStatus, e);
+                // 알림 실패는 상태 변경 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+            }
+            
             log.info("주문 상태 변경: orderId={}, {} -> {}", 
                     orderId, currentStatus, newStatus);
             
@@ -279,8 +341,47 @@ public class OrderService {
     }
     
     /**
-     * 주문 취소 (고객용)
+     * 주문 취소 (고객용) - 접근 토큰 검증 포함
      */
+    @Transactional
+    public OrderResponse cancelOrder(Long orderId, String accessToken) {
+        Order order = findOrderById(orderId);
+        
+        // 접근 토큰 검증 (소유권 확인)
+        if (accessToken == null || !order.getAccessToken().equals(accessToken)) {
+            throw new BusinessException("해당 주문에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        
+        if (!order.canCancel()) {
+            throw new BusinessException("제조가 시작된 주문은 취소할 수 없습니다.", HttpStatus.BAD_REQUEST);
+        }
+        
+        order.cancel();
+        Order cancelledOrder = orderRepository.save(order);
+        
+        // 주문 취소 알림 전송 (양방향)
+        try {
+            List<Notification> notifications = notificationService.sendOrderCancelledNotification(orderId);
+            if (notifications.size() >= 2) {
+                webSocketNotificationService.notifyOrderCancelled(
+                        order.getStoreId(), orderId, notifications.get(0), notifications.get(1));
+            }
+        } catch (Exception e) {
+            log.error("주문 취소 알림 전송 실패: orderId={}", orderId, e);
+            // 알림 실패는 주문 취소 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+        }
+        
+        log.info("주문 취소: orderId={}, orderNumber={}", orderId, order.getOrderNumber());
+        
+        Seat seat = findSeatById(order.getSeatId());
+        return OrderResponse.fromWithSeat(cancelledOrder, seat.getSeatNumber());
+    }
+    
+    /**
+     * 주문 취소 (고객용) - 하위 호환성 (deprecated)
+     * 보안상 토큰 검증 없이 취소하는 것은 권장하지 않음
+     */
+    @Deprecated
     @Transactional
     public OrderResponse cancelOrder(Long orderId) {
         Order order = findOrderById(orderId);
@@ -291,6 +392,17 @@ public class OrderService {
         
         order.cancel();
         Order cancelledOrder = orderRepository.save(order);
+        
+        // 주문 취소 알림 전송 (양방향)
+        try {
+            List<Notification> notifications = notificationService.sendOrderCancelledNotification(orderId);
+            if (notifications.size() >= 2) {
+                webSocketNotificationService.notifyOrderCancelled(
+                        order.getStoreId(), orderId, notifications.get(0), notifications.get(1));
+            }
+        } catch (Exception e) {
+            log.error("주문 취소 알림 전송 실패: orderId={}", orderId, e);
+        }
         
         log.info("주문 취소: orderId={}, orderNumber={}", orderId, order.getOrderNumber());
         

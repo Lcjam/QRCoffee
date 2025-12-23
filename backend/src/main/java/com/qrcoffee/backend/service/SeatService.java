@@ -10,6 +10,7 @@ import com.qrcoffee.backend.util.QRCodeUtil;
 import com.qrcoffee.backend.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,22 +77,6 @@ public class SeatService {
     }
     
     /**
-     * QR코드로 좌석 조회
-     */
-    public SeatResponse getSeatByQRCode(String qrCode) {
-        log.info("QR코드로 좌석 조회: qrCode={}", qrCode);
-        
-        // QR코드 형식 검증
-        ValidationUtils.validateQRCodeFormat(qrCode, qrCodeUtil::isValidQRCode);
-        
-        // 좌석 조회 및 검증
-        Seat seat = seatRepository.findByQrCode(qrCode).orElse(null);
-        ValidationUtils.validateSeatExistsByQRCode(seat, qrCode);
-        
-        return SeatResponse.from(seat);
-    }
-    
-    /**
      * QR코드로 활성 좌석 조회 (고객용)
      */
     public SeatResponse getActiveSeatByQRCode(String qrCode) {
@@ -121,10 +106,10 @@ public class SeatService {
         Seat seat = buildNewSeat(storeId, request);
         Seat savedSeat = seatRepository.save(seat);
         
-        // QR코드 생성 로그
-        qrCodeUtil.logQRCodeGeneration(seat.getQrCode(), seat.getId(), seat.getSeatNumber());
+        // QR코드 생성 로그 (저장된 좌석의 ID 사용)
+        qrCodeUtil.logQRCodeGeneration(savedSeat.getQrCode(), savedSeat.getId(), savedSeat.getSeatNumber());
         
-        log.info("{}: seatId={}, qrCode={}", SEAT_CREATED_MESSAGE, savedSeat.getId(), seat.getQrCode());
+        log.info("{}: seatId={}, qrCode={}", SEAT_CREATED_MESSAGE, savedSeat.getId(), savedSeat.getQrCode());
         return SeatResponse.from(savedSeat);
     }
     
@@ -233,22 +218,6 @@ public class SeatService {
         return seatRepository.findByQrCodeAndIsActiveTrue(qrCode).isPresent();
     }
     
-    /**
-     * 모든 좌석의 QR코드 이미지 업데이트
-     */
-    @Transactional
-    public List<SeatResponse> updateAllQRCodeImages(Long storeId) {
-        log.info("모든 좌석의 QR코드 이미지 업데이트: storeId={}", storeId);
-        
-        List<Seat> seats = seatRepository.findByStoreIdOrderBySeatNumberAsc(storeId);
-        
-        seats.forEach(this::updateQRCodeImageForSeat);
-        
-        List<Seat> updatedSeats = seatRepository.saveAll(seats);
-        
-        return convertToSeatResponses(updatedSeats);
-    }
-    
     // ============ Private Helper Methods ============
     
     /**
@@ -281,7 +250,14 @@ public class SeatService {
      */
     private Seat buildNewSeat(Long storeId, SeatRequest request) {
         String qrCode = generateUniqueQRCode();
-        String qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(qrCode);
+        String qrCodeImageUrl = null;
+        
+        try {
+            qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(qrCode);
+        } catch (Exception e) {
+            log.warn("QR코드 이미지 URL 생성 실패: qrCode={}, error={}", qrCode, e.getMessage());
+            // QR코드 이미지 URL 생성 실패해도 좌석 생성은 계속 진행
+        }
         
         return Seat.builder()
                 .storeId(storeId)
@@ -289,6 +265,7 @@ public class SeatService {
                 .description(request.getDescription())
                 .qrCode(qrCode)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+                .isOccupied(false) // 새 좌석은 항상 비점유 상태로 생성
                 .maxCapacity(request.getMaxCapacity() != null ? request.getMaxCapacity() : DEFAULT_MAX_CAPACITY)
                 .qrCodeImageUrl(qrCodeImageUrl)
                 .qrGeneratedAt(LocalDateTime.now())
@@ -332,7 +309,14 @@ public class SeatService {
      */
     private void regenerateQRCodeForSeat(Seat seat) {
         String newQrCode = generateUniqueQRCode();
-        String newQrCodeImageUrl = qrCodeUtil.generateQRCodeImage(newQrCode);
+        String newQrCodeImageUrl = null;
+        
+        try {
+            newQrCodeImageUrl = qrCodeUtil.generateQRCodeImage(newQrCode);
+        } catch (Exception e) {
+            log.warn("QR코드 이미지 URL 생성 실패: qrCode={}, error={}", newQrCode, e.getMessage());
+            // QR코드 이미지 URL 생성 실패해도 QR코드 재생성은 계속 진행
+        }
         
         seat.setQrCode(newQrCode);
         seat.setQrCodeImageUrl(newQrCodeImageUrl);
@@ -340,14 +324,29 @@ public class SeatService {
     }
     
     /**
-     * 좌석의 QR코드 이미지 업데이트
+     * 좌석 점유 상태 토글
      */
-    private void updateQRCodeImageForSeat(Seat seat) {
-        if (seat.getQrCode() != null) {
-            String qrCodeImageUrl = qrCodeUtil.generateQRCodeImage(seat.getQrCode());
-            seat.setQrCodeImageUrl(qrCodeImageUrl);
-            log.info("좌석 QR코드 이미지 업데이트: seatId={}, seatNumber={}", seat.getId(), seat.getSeatNumber());
+    @Transactional
+    public SeatResponse toggleSeatOccupancy(Long seatId, Long storeId) {
+        log.info("좌석 점유 상태 토글: seatId={}, storeId={}", seatId, storeId);
+        
+        // 좌석 조회 및 검증
+        Seat seat = seatRepository.findById(seatId)
+                .orElseThrow(() -> new BusinessException("좌석을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        
+        ValidationUtils.validateSeatStoreOwnership(seat, storeId);
+        
+        // 점유 상태 토글
+        seat.setIsOccupied(!seat.getIsOccupied());
+        
+        if (seat.getIsOccupied()) {
+            seat.setLastUsedAt(LocalDateTime.now());
         }
+        
+        Seat updatedSeat = seatRepository.save(seat);
+        log.info("좌석 점유 상태 변경: seatId={}, isOccupied={}", seatId, updatedSeat.getIsOccupied());
+        
+        return SeatResponse.from(updatedSeat);
     }
     
     /**

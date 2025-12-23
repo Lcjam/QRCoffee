@@ -33,6 +33,9 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     // 매장과 좌석번호로 조회 (수정 시 중복 체크용 - 자기 자신 제외)
     Optional<Seat> findByStoreIdAndSeatNumberAndIdNot(Long storeId, String seatNumber, Long id);
     
+    // ID와 매장 ID로 좌석 조회
+    Optional<Seat> findByIdAndStoreId(Long id, Long storeId);
+    
     // QR코드 중복 체크
     boolean existsByQrCode(String qrCode);
     

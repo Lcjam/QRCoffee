@@ -53,3 +53,21 @@ logs/
 # 리팩토링 보고서 파일들 제외 (README.md 제외)
 *.md
 !README.md
+
+# 실행 가이드 파일 제외 (로컬 전용)
+SETUP_GUIDE.md
+
+# 스크립트 실행 로그 및 PID 파일
+.pids/
+*.pid
+
+# 텍스트 파일 제외 (robots.txt 제외)
+*.txt
+!frontend/qrcoffee-frontend/public/robots.txt
+
+# SQL 파일 제외 (database_schema.sql만 포함)
+*.sql
+!database_schema.sql
+
+# 노션용 문서 (커밋 제외)
+docs/notion-*.md

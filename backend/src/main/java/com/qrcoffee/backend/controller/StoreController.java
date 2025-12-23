@@ -1,6 +1,7 @@
 package com.qrcoffee.backend.controller;
 
 import com.qrcoffee.backend.common.ApiResponse;
+import com.qrcoffee.backend.common.BaseController;
 import com.qrcoffee.backend.dto.StoreRequest;
 import com.qrcoffee.backend.dto.StoreResponse;
 import com.qrcoffee.backend.service.StoreService;
@@ -18,7 +19,7 @@ import java.util.List;
 @RequestMapping("/api/stores")
 @RequiredArgsConstructor
 @Slf4j
-public class StoreController {
+public class StoreController extends BaseController {
     
     private final StoreService storeService;
     
@@ -27,13 +28,13 @@ public class StoreController {
      */
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<StoreResponse>> getMyStore(HttpServletRequest request) {
-        Long storeId = (Long) request.getAttribute("storeId");
+        Long storeId = getStoreId(request);
         
         log.info("내 매장 정보 조회: storeId={}", storeId);
         
         StoreResponse storeResponse = storeService.getStoreById(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("매장 정보를 조회했습니다.", storeResponse));
+        return success("매장 정보를 조회했습니다.", storeResponse);
     }
     
     /**
@@ -42,19 +43,18 @@ public class StoreController {
     @GetMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreResponse>> getStoreById(@PathVariable Long storeId,
                                                                   HttpServletRequest request) {
-        Long userStoreId = (Long) request.getAttribute("storeId");
+        Long userStoreId = getStoreId(request);
         
         // 자신의 매장 정보만 조회 가능
         if (!storeId.equals(userStoreId)) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("자신의 매장 정보만 조회할 수 있습니다.", "FORBIDDEN"));
+            return error("자신의 매장 정보만 조회할 수 있습니다.", "FORBIDDEN");
         }
         
         log.info("매장 정보 조회: storeId={}", storeId);
         
         StoreResponse storeResponse = storeService.getStoreById(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("매장 정보를 조회했습니다.", storeResponse));
+        return success("매장 정보를 조회했습니다.", storeResponse);
     }
     
     /**
@@ -67,7 +67,7 @@ public class StoreController {
         
         List<StoreResponse> stores = storeService.getActiveStores();
         
-        return ResponseEntity.ok(ApiResponse.success("활성 매장 목록을 조회했습니다.", stores));
+        return success("활성 매장 목록을 조회했습니다.", stores);
     }
     
     /**
@@ -80,7 +80,7 @@ public class StoreController {
         
         List<StoreResponse> stores = storeService.getAllStores();
         
-        return ResponseEntity.ok(ApiResponse.success("전체 매장 목록을 조회했습니다.", stores));
+        return success("전체 매장 목록을 조회했습니다.", stores);
     }
     
     /**
@@ -90,13 +90,13 @@ public class StoreController {
     @PreAuthorize("hasRole('MASTER')")
     public ResponseEntity<ApiResponse<StoreResponse>> updateMyStore(@Valid @RequestBody StoreRequest request,
                                                                    HttpServletRequest httpRequest) {
-        Long storeId = (Long) httpRequest.getAttribute("storeId");
+        Long storeId = getStoreId(httpRequest);
         
         log.info("매장 정보 수정 요청: storeId={}, name={}", storeId, request.getName());
         
         StoreResponse storeResponse = storeService.updateStore(storeId, request);
         
-        return ResponseEntity.ok(ApiResponse.success("매장 정보가 수정되었습니다.", storeResponse));
+        return success("매장 정보가 수정되었습니다.", storeResponse);
     }
     
     /**
@@ -110,7 +110,7 @@ public class StoreController {
         
         StoreResponse storeResponse = storeService.updateStore(storeId, request);
         
-        return ResponseEntity.ok(ApiResponse.success("매장 정보가 수정되었습니다.", storeResponse));
+        return success("매장 정보가 수정되었습니다.", storeResponse);
     }
     
     /**
@@ -123,7 +123,7 @@ public class StoreController {
         
         StoreResponse storeResponse = storeService.createStore(request);
         
-        return ResponseEntity.ok(ApiResponse.success("매장이 생성되었습니다.", storeResponse));
+        return success("매장이 생성되었습니다.", storeResponse);
     }
     
     /**
@@ -136,6 +136,6 @@ public class StoreController {
         
         StoreResponse storeResponse = storeService.toggleStoreStatus(storeId);
         
-        return ResponseEntity.ok(ApiResponse.success("매장 상태가 변경되었습니다.", storeResponse));
+        return success("매장 상태가 변경되었습니다.", storeResponse);
     }
 } 

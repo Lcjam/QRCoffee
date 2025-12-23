@@ -31,15 +31,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * 서브계정 조회 (특정 마스터 계정의)
      */
     List<User> findByParentUserIdAndIsActive(Long parentUserId, Boolean isActive);
-    
-    /**
-     * 매장별 마스터 계정 조회
-     */
-    @Query("SELECT u FROM User u WHERE u.storeId = :storeId AND u.role = 'MASTER' AND u.isActive = true")
-    Optional<User> findMasterByStoreId(@Param("storeId") Long storeId);
-    
-    /**
-     * 활성 상태인 사용자만 조회
-     */
-    List<User> findByIsActive(Boolean isActive);
 } 

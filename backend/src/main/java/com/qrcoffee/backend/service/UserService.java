@@ -15,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,7 +27,6 @@ public class UserService {
     // 상수 정의
     private static final String LOGIN_SUCCESS_MESSAGE = "로그인 성공";
     private static final String SIGNUP_SUCCESS_MESSAGE = "회원가입 완료";
-    private static final String STAFF_ACCOUNT_SUCCESS_MESSAGE = "직원 계정 생성 완료";
     private static final String USER_STATUS_CHANGE_MESSAGE = "사용자 상태 변경";
     
     private final UserRepository userRepository;
@@ -71,7 +69,7 @@ public class UserService {
                 .name(request.getName())
                 .phone(request.getPhone())
                 .role(User.Role.MASTER)
-                .store(store)
+                .storeId(store.getId())
                 .build();
     }
     
@@ -105,7 +103,10 @@ public class UserService {
         
         // 계정 및 매장 활성화 상태 확인
         ValidationUtils.validateUserActive(user);
-        ValidationUtils.validateStoreActive(user.getStore());
+        // 매장 활성화 상태 확인은 storeRepository를 통해 검증
+        Store store = storeRepository.findById(user.getStoreId())
+                .orElseThrow(() -> new BusinessException("매장을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        ValidationUtils.validateStoreActive(store);
         
         return user;
     }
@@ -128,7 +129,7 @@ public class UserService {
                 user.getEmail(), 
                 user.getId(), 
                 user.getRole().name(), 
-                user.getStore() != null ? user.getStore().getId() : null
+                user.getStoreId()
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
@@ -139,7 +140,7 @@ public class UserService {
                 user.getEmail(),
                 user.getName(),
                 user.getRole().name(),
-                user.getStore() != null ? user.getStore().getId() : null
+                user.getStoreId()
         );
     }
     
@@ -163,7 +164,7 @@ public class UserService {
      * 매장별 사용자 목록 조회
      */
     public List<UserResponse> getUsersByStore(Long storeId) {
-        List<User> users = userRepository.findByStore_IdAndIsActive(storeId, true);
+        List<User> users = userRepository.findByStoreIdAndIsActive(storeId, true);
         return users.stream()
                 .map(UserResponse::from)
                 .collect(Collectors.toList());
@@ -191,46 +192,6 @@ public class UserService {
     }
     
     /**
-     * 직원 계정 생성
-     */
-    @Transactional
-    public UserResponse createStaffAccount(SignupRequest request, Long masterUserId) {
-        log.info("직원 계정 생성 시도: {} by masterUserId={}", request.getEmail(), masterUserId);
-        
-        // 마스터 사용자 조회 및 권한 검증
-        User masterUser = findUserById(masterUserId);
-        ValidationUtils.validateMasterRole(masterUser);
-        
-        // 이메일 중복 검증
-        ValidationUtils.validateEmailNotDuplicate(
-                request.getEmail(), 
-                userRepository.existsByEmail(request.getEmail())
-        );
-        
-        // 직원 계정 생성
-        User staffUser = createStaffUser(request, masterUser.getStore());
-        User savedUser = userRepository.save(staffUser);
-        
-        log.info("{}: {} (ID: {})", STAFF_ACCOUNT_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
-        
-        return UserResponse.from(savedUser);
-    }
-    
-    /**
-     * 직원 사용자 생성
-     */
-    private User createStaffUser(SignupRequest request, Store store) {
-        return User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName())
-                .phone(request.getPhone())
-                .role(User.Role.STAFF)
-                .store(store)
-                .build();
-    }
-    
-    /**
      * 매장 검증 및 조회
      */
     private Store validateAndGetStore(Long storeId) {
@@ -253,5 +214,52 @@ public class UserService {
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+    }
+    
+    /**
+     * 서브계정 목록 조회
+     */
+    public List<UserResponse> getSubAccounts(Long masterUserId) {
+        log.info("서브계정 목록 조회: masterUserId={}", masterUserId);
+        
+        List<User> subAccounts = userRepository.findByParentUserIdAndIsActive(masterUserId, true);
+        return subAccounts.stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 서브계정 생성
+     */
+    @Transactional
+    public UserResponse createSubAccount(SignupRequest request, Long masterUserId) {
+        log.info("서브계정 생성 시도: {} by masterUserId={}", request.getEmail(), masterUserId);
+        
+        // 마스터 사용자 조회 및 권한 검증
+        User masterUser = findUserById(masterUserId);
+        ValidationUtils.validateMasterRole(masterUser);
+        
+        // 이메일 중복 검증
+        ValidationUtils.validateEmailNotDuplicate(
+                request.getEmail(), 
+                userRepository.existsByEmail(request.getEmail())
+        );
+        
+        // 서브계정 생성
+        User subUser = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .name(request.getName())
+                .phone(request.getPhone())
+                .role(User.Role.SUB)
+                .storeId(masterUser.getStoreId())
+                .parentUserId(masterUserId)
+                .build();
+        
+        User savedUser = userRepository.save(subUser);
+        
+        log.info("서브계정 생성 완료: {} (ID: {})", savedUser.getEmail(), savedUser.getId());
+        
+        return UserResponse.from(savedUser);
     }
 } 

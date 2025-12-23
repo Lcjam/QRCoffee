@@ -1,0 +1,90 @@
+package com.qrcoffee.backend.repository;
+
+import com.qrcoffee.backend.entity.Order;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface OrderRepository extends JpaRepository<Order, Long> {
+    
+    /**
+     * 주문 번호로 조회
+     */
+    Optional<Order> findByOrderNumber(String orderNumber);
+    
+    /**
+     * 매장별 주문 목록 조회 (최신순)
+     */
+    List<Order> findByStoreIdOrderByCreatedAtDesc(Long storeId);
+    
+    /**
+     * 매장별 특정 상태 주문 조회 (최신순)
+     */
+    List<Order> findByStoreIdAndStatusOrderByCreatedAtDesc(Long storeId, Order.OrderStatus status);
+    
+    /**
+     * 매장 및 주문 ID로 조회
+     */
+    Optional<Order> findByIdAndStoreId(Long id, Long storeId);
+    
+    /**
+     * 매장별 특정 날짜 주문 개수
+     */
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.storeId = :storeId AND DATE(o.createdAt) = DATE(:date)")
+    long countByStoreIdAndDate(@Param("storeId") Long storeId, @Param("date") LocalDateTime date);
+    
+    /**
+     * 매장별 특정 상태 주문 개수
+     */
+    long countByStoreIdAndStatus(Long storeId, Order.OrderStatus status);
+    
+    /**
+     * 매장별 특정 상태가 아닌 주문 개수 (취소 제외 등)
+     */
+    long countByStoreIdAndStatusNot(Long storeId, Order.OrderStatus status);
+    
+    /**
+     * 매장별 시간대별 통계 조회 (오늘)
+     */
+    @Query("SELECT HOUR(o.createdAt) as hour, COUNT(o) as orderCount, COALESCE(SUM(o.totalAmount), 0) as salesAmount " +
+           "FROM Order o " +
+           "WHERE o.storeId = :storeId AND DATE(o.createdAt) = DATE(:date) " +
+           "GROUP BY HOUR(o.createdAt) " +
+           "ORDER BY hour ASC")
+    List<Object[]> findHourlyStatsByStoreId(@Param("storeId") Long storeId, @Param("date") LocalDateTime date);
+    
+    /**
+     * 매장별 기본 통계 조회 (단일 쿼리로 통합)
+     * 오늘 주문 수, 대기 주문 수, 오늘 매출액, 전체 주문 수를 한 번에 조회
+     */
+    @Query(value = "SELECT " +
+           "COUNT(CASE WHEN DATE(o.created_at) = DATE(:today) THEN 1 END) as todayOrderCount, " +
+           "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END) as pendingOrderCount, " +
+           "COALESCE(SUM(CASE WHEN DATE(p.approved_at) = DATE(:today) AND p.status = 'DONE' THEN p.amount ELSE 0 END), 0) as todaySalesAmount, " +
+           "COUNT(CASE WHEN o.status != 'CANCELLED' THEN 1 END) as totalOrderCount " +
+           "FROM orders o " +
+           "LEFT JOIN payments p ON o.id = p.order_id " +
+           "WHERE o.store_id = :storeId", nativeQuery = true)
+    Object[] findBasicStatsByStoreId(@Param("storeId") Long storeId, @Param("today") LocalDateTime today);
+    
+    /**
+     * 매장별 주문 상태별 개수 조회 (단일 쿼리로 통합)
+     * CASE WHEN을 사용하여 모든 상태의 개수를 한 번에 조회
+     */
+    @Query(value = "SELECT " +
+           "COUNT(CASE WHEN o.status = 'PENDING' THEN 1 END) as pendingCount, " +
+           "COUNT(CASE WHEN o.status = 'PREPARING' THEN 1 END) as preparingCount, " +
+           "COUNT(CASE WHEN o.status = 'COMPLETED' THEN 1 END) as completedCount, " +
+           "COUNT(CASE WHEN o.status = 'PICKED_UP' THEN 1 END) as pickedUpCount, " +
+           "COUNT(CASE WHEN o.status = 'CANCELLED' THEN 1 END) as cancelledCount " +
+           "FROM orders o " +
+           "WHERE o.store_id = :storeId", nativeQuery = true)
+    Object[] findOrderStatsByStoreId(@Param("storeId") Long storeId);
+}
+

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qrcoffee.backend.config.TossPaymentsConfig;
 import com.qrcoffee.backend.dto.PaymentConfirmRequest;
+import com.qrcoffee.backend.dto.PaymentCancelRequest;
 import com.qrcoffee.backend.dto.PaymentResponse;
 import com.qrcoffee.backend.dto.CartPaymentRequest;
 import com.qrcoffee.backend.dto.OrderRequest;
@@ -12,6 +13,7 @@ import com.qrcoffee.backend.dto.OrderItemRequest;
 import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.entity.Payment;
 import com.qrcoffee.backend.entity.User;
+import com.qrcoffee.backend.entity.Notification;
 import com.qrcoffee.backend.exception.BusinessException;
 import com.qrcoffee.backend.repository.OrderRepository;
 import com.qrcoffee.backend.repository.PaymentRepository;
@@ -20,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Base64;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -57,6 +57,8 @@ public class PaymentService {
     private final TossPaymentsConfig tossPaymentsConfig;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
+    private final WebSocketNotificationService webSocketNotificationService;
     
     /**
      * 장바구니에서 바로 결제 준비 (주문 생성 없이)
@@ -64,11 +66,13 @@ public class PaymentService {
     public PaymentResponse prepareCartPayment(CartPaymentRequest request, User user) {
         log.info("장바구니 결제 준비 시작: amount={}, items={}", request.getTotalAmount(), request.getOrderItems().size());
         
-        String orderIdToss = generateOrderId(user.getId());
+        // 비회원 결제 지원: userId가 없으면 0으로 설정
+        Long userId = (user != null) ? user.getId() : 0L;
+        String orderIdToss = generateOrderId(userId);
         Payment payment = createPendingPayment(request, orderIdToss);
         
         // 장바구니 정보를 메타데이터로 저장
-        Map<String, Object> metadata = buildCartMetadata(request, user.getId());
+        Map<String, Object> metadata = buildCartMetadata(request, userId);
         payment.setMetadata(metadata);
 
         Payment savedPayment = paymentRepository.save(payment);
@@ -140,8 +144,14 @@ public class PaymentService {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("cartItems", request.getOrderItems());
         metadata.put("seatId", request.getSeatId());
-        metadata.put("customerName", request.getCustomerName());
-        metadata.put("customerPhone", request.getCustomerPhone());
+        metadata.put("storeId", request.getStoreId());
+        // 고객 정보는 선택사항이므로 null이 아니고 빈 문자열이 아닐 때만 추가
+        if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
+            metadata.put("customerName", request.getCustomerName().trim());
+        }
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
+            metadata.put("customerPhone", request.getCustomerPhone().trim());
+        }
         metadata.put("userId", userId);
         return metadata;
     }
@@ -189,6 +199,15 @@ public class PaymentService {
             Order order = createOrderFromPayment(payment, metadata);
             payment.setOrderId(order.getId());
             paymentRepository.save(payment);
+            
+            // 결제 완료 알림 전송 (고객에게)
+            try {
+                Notification notification = notificationService.sendPaymentCompletedNotification(order.getId());
+                webSocketNotificationService.notifyPaymentCompleted(order.getId(), notification);
+            } catch (Exception e) {
+                log.error("결제 완료 알림 전송 실패: orderId={}", order.getId(), e);
+                // 알림 실패는 결제 완료 실패로 이어지지 않도록 예외를 잡아서 로그만 남김
+            }
             
             log.info("결제 성공 후 주문 생성 완료: orderId={}, paymentId={}", order.getId(), payment.getId());
         }
@@ -439,13 +458,14 @@ public class PaymentService {
         List<OrderItemRequest> orderItems = extractOrderItemsFromMetadata(metadata);
         
         return OrderRequest.builder()
-                .storeId(DEFAULT_STORE_ID)
+                .storeId(extractLongFromMetadata(metadata, "storeId"))
                 .orderItems(orderItems)
                 .seatId(extractLongFromMetadata(metadata, "seatId"))
-                .totalAmount(payment.getTotalAmount())
-                .customerName((String) metadata.get("customerName"))
-                .customerPhone((String) metadata.get("customerPhone"))
-                .customerRequest("")
+                // totalAmount는 OrderService에서 주문 항목으로부터 자동 계산됨
+                // 고객 정보는 선택사항이므로 null일 수 있음
+                .customerName(metadata.containsKey("customerName") ? (String) metadata.get("customerName") : null)
+                .customerPhone(metadata.containsKey("customerPhone") ? (String) metadata.get("customerPhone") : null)
+                .customerRequest(metadata.containsKey("customerRequest") ? (String) metadata.get("customerRequest") : null)
                 .build();
     }
     
@@ -576,8 +596,8 @@ public class PaymentService {
                 .method(payment.getMethod())
                 .requestedAt(payment.getRequestedAt() != null ? payment.getRequestedAt().toString() : null)
                 .approvedAt(payment.getApprovedAt() != null ? payment.getApprovedAt().toString() : null)
-                .createdAt(payment.getCreatedAt())
-                .updatedAt(payment.getUpdatedAt())
+                .createdAt(payment.getCreatedAt() != null ? payment.getCreatedAt().toString() : null)
+                .updatedAt(payment.getUpdatedAt() != null ? payment.getUpdatedAt().toString() : null)
                 .currency(payment.getCurrency())
                 .country(payment.getCountry())
                 .version(payment.getVersion())
@@ -590,8 +610,7 @@ public class PaymentService {
     private PaymentResponse buildPaymentResponseFromToss(Map<String, Object> responseBody) {
         try {
             // ObjectMapper로 JsonNode 변환
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode jsonNode = mapper.valueToTree(responseBody);
+            JsonNode jsonNode = objectMapper.valueToTree(responseBody);
             
             log.debug("토스페이먼츠 응답 파싱 시작");
             
@@ -628,5 +647,83 @@ public class PaymentService {
             log.error("토스페이먼츠 응답 처리 중 오류 발생: {}", e.getMessage(), e);
             throw new BusinessException("결제 응답 처리에 실패했습니다.");
         }
+    }
+    
+    /**
+     * 결제 취소
+     */
+    @Transactional
+    public PaymentResponse cancelPayment(PaymentCancelRequest request) {
+        log.info("결제 취소 요청: paymentKey={}, cancelReason={}", request.getPaymentKey(), request.getCancelReason());
+        
+        // 결제 정보 조회
+        Payment payment = paymentRepository.findByPaymentKey(request.getPaymentKey())
+                .orElseThrow(() -> new BusinessException("결제 정보를 찾을 수 없습니다."));
+        
+        // 이미 취소된 결제인지 확인
+        if ("CANCELED".equals(payment.getStatus()) || "PARTIAL_CANCELED".equals(payment.getStatus())) {
+            throw new BusinessException("이미 취소된 결제입니다.");
+        }
+        
+        // DONE 상태가 아니면 취소 불가
+        if (!"DONE".equals(payment.getStatus())) {
+            throw new BusinessException("결제 완료된 건만 취소할 수 있습니다.");
+        }
+        
+        try {
+            // 토스페이먼츠 결제 취소 API 호출
+            PaymentResponse cancelResponse = callTossPaymentCancelAPI(request, payment);
+            
+            // 결제 정보 업데이트
+            payment.setStatus(cancelResponse.getStatus());
+            payment.setCancelReason(request.getCancelReason());
+            payment.setBalanceAmount(BigDecimal.ZERO);
+            paymentRepository.save(payment);
+            
+            log.info("결제 취소 완료: paymentKey={}, status={}", request.getPaymentKey(), cancelResponse.getStatus());
+            
+            return convertToPaymentResponse(payment);
+            
+        } catch (Exception e) {
+            log.error("결제 취소 실패: {}", e.getMessage(), e);
+            throw new BusinessException("결제 취소에 실패했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 토스페이먼츠 결제 취소 API 호출
+     */
+    private PaymentResponse callTossPaymentCancelAPI(PaymentCancelRequest request, Payment payment) {
+        try {
+            HttpEntity<Map<String, Object>> entity = createTossCancelApiRequest(request, payment);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://api.tosspayments.com/v1/payments/" + request.getPaymentKey() + "/cancel",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            
+            log.debug("토스페이먼츠 취소 API 응답 성공: status={}", response.getStatusCode());
+            
+            return parseTossApiResponse(response.getBody());
+            
+        } catch (HttpClientErrorException e) {
+            log.error("토스페이먼츠 취소 API 호출 실패: {}", e.getResponseBodyAsString());
+            throw new BusinessException("결제 취소 중 오류가 발생했습니다: " + e.getStatusCode());
+        } catch (Exception e) {
+            log.error("토스페이먼츠 취소 API 호출 중 예외 발생: {}", e.getMessage(), e);
+            throw new BusinessException("결제 취소 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 토스페이먼츠 취소 API 요청 엔티티 생성
+     */
+    private HttpEntity<Map<String, Object>> createTossCancelApiRequest(PaymentCancelRequest request, Payment payment) {
+        HttpHeaders headers = createTossApiHeaders();
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("cancelReason", request.getCancelReason());
+        requestBody.put("cancelAmount", payment.getBalanceAmount());
+        return new HttpEntity<>(requestBody, headers);
     }
 } 
