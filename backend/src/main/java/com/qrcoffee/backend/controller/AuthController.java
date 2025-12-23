@@ -2,7 +2,10 @@ package com.qrcoffee.backend.controller;
 
 import com.qrcoffee.backend.common.ApiResponse;
 import com.qrcoffee.backend.common.BaseController;
-import com.qrcoffee.backend.dto.*;
+import com.qrcoffee.backend.dto.JwtResponse;
+import com.qrcoffee.backend.dto.LoginRequest;
+import com.qrcoffee.backend.dto.SignupRequest;
+import com.qrcoffee.backend.dto.UserResponse;
 import com.qrcoffee.backend.service.UserService;
 import com.qrcoffee.backend.util.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,7 +13,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 
