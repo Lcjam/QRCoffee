@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.config;
 
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,6 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
     // IP별 연결 수 추적
     private final Map<String, AtomicInteger> connectionCounts = new ConcurrentHashMap<>();
     private final Map<String, Long> lastConnectionTime = new ConcurrentHashMap<>();
-    
-    // Rate Limiting 설정
-    private static final int MAX_CONNECTIONS_PER_IP = 5;
-    private static final long CONNECTION_RATE_LIMIT_MS = 1000; // 1초당 1개 연결
-    private static final long CONNECTION_TIMEOUT_MS = 300000; // 5분 타임아웃
-    private static final long CLEANUP_INTERVAL_MS = 600000; // 10분마다 정리
     
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -179,7 +174,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
      */
     private boolean checkConnectionLimit(String ipAddress) {
         AtomicInteger count = connectionCounts.get(ipAddress);
-        if (count != null && count.get() >= MAX_CONNECTIONS_PER_IP) {
+        if (count != null && count.get() >= Constants.WebSocket.MAX_CONNECTIONS_PER_IP) {
             return false;
         }
         return true;
@@ -214,7 +209,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
                 .filter(entry -> {
                     Long lastTime = lastConnectionTime.get(entry.getKey());
                     return lastTime != null && 
-                           (currentTime - lastTime) > CONNECTION_TIMEOUT_MS;
+                           (currentTime - lastTime) > Constants.WebSocket.CONNECTION_TIMEOUT_MS;
                 })
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());

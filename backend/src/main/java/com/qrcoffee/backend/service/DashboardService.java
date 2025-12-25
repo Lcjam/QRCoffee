@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.service;
 
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.dto.DashboardStatsResponse;
 import com.qrcoffee.backend.entity.Order;
 import com.qrcoffee.backend.entity.Payment;
@@ -34,8 +35,7 @@ public class DashboardService {
     private final PaymentRepository paymentRepository;
     private final OrderItemRepository orderItemRepository;
     
-    private static final int DEFAULT_POPULAR_MENU_LIMIT = 10;
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern(Constants.Dashboard.DATE_FORMAT_PATTERN);
     
     /**
      * 전체 대시보드 통계 조회
@@ -47,7 +47,7 @@ public class DashboardService {
                 .basicStats(getBasicStats(storeId))
                 .salesStats(getSalesStats(storeId))
                 .orderStats(getOrderStats(storeId))
-                .popularMenus(getPopularMenus(storeId, DEFAULT_POPULAR_MENU_LIMIT))
+                .popularMenus(getPopularMenus(storeId, Constants.Dashboard.DEFAULT_POPULAR_MENU_LIMIT))
                 .hourlyStats(getHourlyStats(storeId))
                 .build();
     }

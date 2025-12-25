@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { SignupRequest } from '../types/auth';
+import { validateSignupForm } from '../utils/validation';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,27 +46,18 @@ const SignupPage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email || !formData.password || !formData.name) {
-      setError('필수 정보를 모두 입력해주세요.');
+    const validation = validateSignupForm({
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: confirmPassword,
+      name: formData.name,
+    });
+    
+    if (!validation.isValid) {
+      setError(validation.error || '입력값 검증에 실패했습니다.');
       return false;
     }
-
-    if (formData.password.length < 6) {
-      setError('비밀번호는 최소 6자 이상이어야 합니다.');
-      return false;
-    }
-
-    if (formData.password !== confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('올바른 이메일 형식을 입력해주세요.');
-      return false;
-    }
-
+    
     return true;
   };
 

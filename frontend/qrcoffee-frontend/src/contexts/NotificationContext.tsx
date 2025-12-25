@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
+import { Snackbar, Alert } from '@mui/material';
 import { Notification, NotificationUserType } from '../types/notification';
 import { websocketService } from '../services/websocketService';
 import { notificationService } from '../services/notificationService';
 import { useAuth } from './AuthContext';
-import { Snackbar, Alert } from '@mui/material';
-import DOMPurify from 'dompurify';
 
 interface NotificationContextType {
   notifications: Notification[];

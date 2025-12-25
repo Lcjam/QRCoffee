@@ -2,6 +2,7 @@ package com.qrcoffee.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.config.TossPaymentsConfig;
 import com.qrcoffee.backend.dto.PaymentConfirmRequest;
 import com.qrcoffee.backend.dto.PaymentCancelRequest;
@@ -41,15 +42,6 @@ import java.util.Base64;
 @RequiredArgsConstructor
 @Transactional
 public class PaymentService {
-    
-    // 상수 정의
-    private static final String TOSS_API_URL = "https://api.tosspayments.com/v1/payments/confirm";
-    private static final Long DEFAULT_STORE_ID = 1L;
-    private static final int MAX_RETRY_COUNT = 3;
-    private static final String PROVIDER_ERROR = "PROVIDER_ERROR";
-    private static final String ORDER_ID_PREFIX = "order_";
-    private static final BigDecimal VAT_RATE = BigDecimal.valueOf(1.1);
-    private static final String DEFAULT_PAYMENT_METHOD = "간편결제";
     
     private final PaymentRepository paymentRepository;
     private final OrderService orderService;
@@ -115,7 +107,7 @@ public class PaymentService {
      * 고유한 주문 ID 생성
      */
     private String generateOrderId(Long userId) {
-        return ORDER_ID_PREFIX + System.currentTimeMillis() + "_" + userId;
+        return Constants.Payment.ORDER_ID_PREFIX + System.currentTimeMillis() + "_" + userId;
     }
     
     /**
@@ -217,7 +209,7 @@ public class PaymentService {
      * 토스페이먼츠 결제 승인 API 호출
      */
     private PaymentResponse callTossPaymentConfirmAPI(PaymentConfirmRequest request) {
-        for (int attempt = 1; attempt <= MAX_RETRY_COUNT; attempt++) {
+        for (int attempt = 1; attempt <= Constants.Payment.MAX_RETRY_COUNT; attempt++) {
             try {
                 return attemptTossApiCall(request, attempt);
             } catch (HttpClientErrorException e) {
@@ -225,15 +217,15 @@ public class PaymentService {
                     return handleProviderErrorForTest(request);
                 }
                 
-                if (attempt == MAX_RETRY_COUNT) {
+                if (attempt == Constants.Payment.MAX_RETRY_COUNT) {
                     throw new BusinessException("결제 승인 중 오류가 발생했습니다: " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
                 }
                 
-                log.warn("토스페이먼츠 API 호출 실패 (시도 {}/{}): {}", attempt, MAX_RETRY_COUNT, e.getMessage());
+                log.warn("토스페이먼츠 API 호출 실패 (시도 {}/{}): {}", attempt, Constants.Payment.MAX_RETRY_COUNT, e.getMessage());
                 
             } catch (Exception e) {
-                if (attempt < MAX_RETRY_COUNT) {
-                    log.warn("예상치 못한 오류 발생, {}초 후 재시도 ({}/{})", attempt, attempt, MAX_RETRY_COUNT);
+                if (attempt < Constants.Payment.MAX_RETRY_COUNT) {
+                    log.warn("예상치 못한 오류 발생, {}초 후 재시도 ({}/{})", attempt, attempt, Constants.Payment.MAX_RETRY_COUNT);
                     waitForRetry(attempt);
                     continue;
                 }
@@ -253,7 +245,7 @@ public class PaymentService {
             attempt, MAX_RETRY_COUNT, request.getPaymentKey(), request.getOrderId(), request.getAmount());
         
         HttpEntity<Map<String, Object>> entity = createTossApiRequest(request);
-        ResponseEntity<String> response = restTemplate.exchange(TOSS_API_URL, HttpMethod.POST, entity, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(Constants.Payment.TOSS_API_URL, HttpMethod.POST, entity, String.class);
         
         log.debug("토스페이먼츠 API 응답 성공 (시도 {}): status={}", attempt, response.getStatusCode());
         
@@ -311,7 +303,7 @@ public class PaymentService {
                 .orderIdToss(request.getOrderId())
                 .orderName("테스트 결제")
                 .status("DONE")
-                .method(DEFAULT_PAYMENT_METHOD)
+                .method(Constants.Payment.DEFAULT_PAYMENT_METHOD)
                 .totalAmount(request.getAmount())
                 .balanceAmount(request.getAmount())
                 .suppliedAmount(calculateSuppliedAmount(request.getAmount()))
@@ -411,12 +403,12 @@ public class PaymentService {
                 return "가상계좌";
             }
             
-            log.warn("결제 수단을 확인할 수 없습니다. 기본값으로 '{}' 설정", DEFAULT_PAYMENT_METHOD);
-            return DEFAULT_PAYMENT_METHOD;
+            log.warn("결제 수단을 확인할 수 없습니다. 기본값으로 '{}' 설정", Constants.Payment.DEFAULT_PAYMENT_METHOD);
+            return Constants.Payment.DEFAULT_PAYMENT_METHOD;
             
         } catch (Exception e) {
             log.error("결제 수단 추출 중 오류 발생", e);
-            return DEFAULT_PAYMENT_METHOD;
+            return Constants.Payment.DEFAULT_PAYMENT_METHOD;
         }
     }
     
@@ -526,7 +518,7 @@ public class PaymentService {
         }
         if (cleanMethod.toLowerCase().contains("easy") || cleanMethod.contains("간편") || 
             cleanMethod.contains("토스") || cleanMethod.toLowerCase().contains("toss")) {
-            return DEFAULT_PAYMENT_METHOD;
+            return Constants.Payment.DEFAULT_PAYMENT_METHOD;
         }
         if (cleanMethod.toLowerCase().contains("mobile") || cleanMethod.contains("휴대폰")) {
             return "휴대폰";
@@ -548,7 +540,7 @@ public class PaymentService {
      */
     private BigDecimal calculateSuppliedAmount(BigDecimal totalAmount) {
         // 총액 / 1.1 (부가세 10% 제외)
-        return totalAmount.divide(VAT_RATE, 0, RoundingMode.HALF_UP);
+        return totalAmount.divide(Constants.Payment.VAT_RATE, 0, RoundingMode.HALF_UP);
     }
     
     /**
