@@ -12,7 +12,7 @@ QR코드 기반 무인 카페 주문 시스템
 - 📱 **실시간 주문 관리**: 관리자용 주문 상태 관리 및 고객용 주문 추적
 - 🛒 **장바구니 기능**: 메뉴 선택, 수량 조정, 주문 확인
 - 👨‍💼 **관리자 시스템**: 매장 관리, 메뉴 관리, 좌석 관리, 서브계정 지원
-- 📊 **주문 통계**: 주문 현황 및 통계 조회 (예정)
+- 📊 **주문 통계**: 주문 현황 및 통계 조회
 
 ## 🛠 기술 스택
 
@@ -21,7 +21,7 @@ QR코드 기반 무인 카페 주문 시스템
 - **Spring Security** - JWT 기반 인증/인가
 - **Spring Data JPA** - 데이터베이스 ORM
 - **MySQL 8.0** - 메인 데이터베이스
-- **WebSocket** - 실시간 알림 (예정)
+- **WebSocket** - 실시간 알림
 - **JWT** - 토큰 기반 인증
 
 ### Frontend
@@ -126,8 +126,12 @@ npm start
 - **프론트엔드**: http://localhost:3000
 - **백엔드 API**: http://localhost:8080
 - **헬스체크**: http://localhost:8080/api/health
+- **Swagger UI**: http://localhost:8080/swagger-ui.html (개발 환경에서만 접근 가능)
+- **OpenAPI 문서**: http://localhost:8080/v3/api-docs (개발 환경에서만 접근 가능)
 
-> 💡 상세한 설정 가이드는 `SETUP_GUIDE.md`를 참고하세요.
+> 💡 상세한 설정 가이드는 `SETUP_GUIDE.md`를 참고하세요.  
+> 📚 **API 문서는 Swagger UI를 사용하세요** - 항상 최신 API 명세를 보장합니다.  
+> 🔒 **보안**: Swagger UI는 개발 환경(`dev` 프로필)에서만 활성화됩니다. 프로덕션 환경에서는 자동으로 비활성화됩니다.
 
 ## 📁 프로젝트 구조
 
@@ -301,10 +305,19 @@ QRCoffee/
 
 ## 📚 문서
 
-- `SETUP_GUIDE.md` - 상세한 설정 및 실행 가이드
+- **Swagger UI**: http://localhost:8080/swagger-ui.html - **주요 API 문서** (개발 환경에서만 접근 가능)
+  - 인터랙티브 API 문서로 모든 엔드포인트를 직접 테스트할 수 있습니다
+  - 항상 최신 API 명세를 보장합니다
+  - JWT 인증을 지원하여 인증이 필요한 API도 테스트 가능합니다
+- [API 문서](docs/API.md) - REST API 참고 문서 (Swagger UI 보조 자료)
+- [개발 가이드](docs/DEVELOPMENT.md) - 코딩 컨벤션 및 아키텍처 가이드
+- [기여 가이드](CONTRIBUTING.md) - 프로젝트 기여 방법
+- [CHANGELOG.md](CHANGELOG.md) - 변경 이력
 - `database_schema.sql` - 데이터베이스 스키마
 - `개발기능명세서.txt` - 기능 명세서
 - `개발단계계획서.txt` - 개발 단계 계획
+
+> ⚠️ **보안 주의**: Swagger UI는 개발 환경(`dev` 프로필)에서만 활성화됩니다. 프로덕션 환경에서는 자동으로 비활성화되어 API 구조가 외부에 노출되지 않습니다.
 
 ## ⚖️ 라이선스
 
@@ -314,4 +327,4 @@ QRCoffee/
 
 **개발자**: Lcjam  
 **시작일**: 2024년  
-**현재 단계**: 7단계 완료 (결제 시스템)
+**현재 단계**: 프로젝트 점검 완료 (1-4단계)

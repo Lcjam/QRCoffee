@@ -90,6 +90,22 @@ management:
     health:
       show-details: when-authorized
 
+# Swagger/OpenAPI Configuration (기본값: 비활성화)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: false  # 기본값: 비활성화 (보안)
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+  show-actuator: false
+
+# OpenAPI 서버 URL 설정 (선택사항)
+openapi:
+  production-url: ${OPENAPI_PRODUCTION_URL:}  # 프로덕션 서버 URL (설정된 경우에만 Swagger에 표시)
+
 ---
 # Development Profile
 spring:
@@ -112,6 +128,11 @@ logging:
     root: INFO
     com.qrcoffee: DEBUG
 
+# Swagger/OpenAPI Configuration (개발 환경에서만 활성화)
+springdoc:
+  swagger-ui:
+    enabled: true  # 개발 환경에서만 활성화
+
 ---
 # Production Profile
 spring:
@@ -127,4 +148,9 @@ spring:
 logging:
   level:
     root: WARN
-    com.qrcoffee: INFO 
+    com.qrcoffee: INFO
+
+# Swagger/OpenAPI Configuration (프로덕션 환경에서는 비활성화)
+springdoc:
+  swagger-ui:
+    enabled: false  # 프로덕션 환경에서는 비활성화 (보안)

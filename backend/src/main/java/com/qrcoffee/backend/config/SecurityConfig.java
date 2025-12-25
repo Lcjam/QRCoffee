@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +26,7 @@ import java.util.List;
 public class SecurityConfig {
     
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
     
     @Value("${cors.allowed-origins:http://localhost:3000}")
     private String allowedOrigins;
@@ -37,6 +39,14 @@ public class SecurityConfig {
     
     @Value("${cors.allow-credentials:true}")
     private boolean allowCredentials;
+    
+    /**
+     * 개발 환경 여부 확인
+     */
+    private boolean isDevProfile() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        return activeProfiles.length == 0 || Arrays.asList(activeProfiles).contains("dev");
+    }
     
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -57,8 +67,31 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
             // 요청 권한 설정
-            .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> {
+                // Swagger/OpenAPI 문서 엔드포인트 (개발 환경에서만 공개)
+                if (isDevProfile()) {
+                    auth.requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                    ).permitAll();
+                } else {
+                    // 프로덕션 환경에서는 Swagger 경로 차단
+                    auth.requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/v3/api-docs.yaml",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                    ).denyAll();
+                }
+                
                 // 공개 엔드포인트
+                auth
                 .requestMatchers(
                     "/api/auth/login",
                     "/api/auth/signup", 
@@ -79,8 +112,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/sub-accounts/**").hasRole("MASTER")
                 
                 // 나머지는 인증 필요
-                .anyRequest().authenticated()
-            )
+                .anyRequest().authenticated();
+            })
             
             // JWT 인증 필터 추가
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

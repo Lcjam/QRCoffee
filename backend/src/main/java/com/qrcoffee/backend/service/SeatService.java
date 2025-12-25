@@ -101,7 +101,7 @@ public class SeatService {
         // QR코드 생성 로그 (저장된 좌석의 ID 사용)
         qrCodeUtil.logQRCodeGeneration(savedSeat.getQrCode(), savedSeat.getId(), savedSeat.getSeatNumber());
         
-        log.info("{}: seatId={}, qrCode={}", SEAT_CREATED_MESSAGE, savedSeat.getId(), savedSeat.getQrCode());
+        log.info("{}: seatId={}, qrCode={}", Constants.Seat.SEAT_CREATED_MESSAGE, savedSeat.getId(), savedSeat.getQrCode());
         return SeatResponse.from(savedSeat);
     }
     
@@ -137,7 +137,7 @@ public class SeatService {
         Seat seat = findSeatByIdAndValidateOwnership(seatId, storeId);
         
         seatRepository.delete(seat);
-        log.info("{}: seatId={}", SEAT_DELETED_MESSAGE, seatId);
+        log.info("{}: seatId={}", Constants.Seat.SEAT_DELETED_MESSAGE, seatId);
     }
     
     /**

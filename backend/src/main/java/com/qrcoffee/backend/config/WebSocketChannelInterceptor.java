@@ -162,7 +162,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
         Long lastTime = lastConnectionTime.get(ipAddress);
         if (lastTime != null) {
             long timeSinceLastConnection = System.currentTimeMillis() - lastTime;
-            if (timeSinceLastConnection < CONNECTION_RATE_LIMIT_MS) {
+            if (timeSinceLastConnection < Constants.WebSocket.CONNECTION_RATE_LIMIT_MS) {
                 return false;
             }
         }
@@ -200,7 +200,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
      * 주기적으로 오래된 연결 정보 정리 (메모리 누수 방지)
      * 부수 효과를 제거하고 경쟁 상태를 방지하기 위해 읽기와 쓰기를 분리
      */
-    @org.springframework.scheduling.annotation.Scheduled(fixedRate = CLEANUP_INTERVAL_MS)
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = Constants.WebSocket.CLEANUP_INTERVAL_MS)
     public void cleanupOldConnections() {
         long currentTime = System.currentTimeMillis();
         

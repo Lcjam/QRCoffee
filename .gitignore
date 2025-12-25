@@ -71,3 +71,7 @@ SETUP_GUIDE.md
 
 # 노션용 문서 (커밋 제외)
 docs/notion-*.md
+!docs/API.md
+!docs/DEVELOPMENT.md
+!CONTRIBUTING.md
+!CHANGELOG.md
