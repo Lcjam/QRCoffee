@@ -12,20 +12,39 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * OpenAPI (Swagger) 설정
+ * 개발 환경에서만 활성화됩니다.
  */
 @Configuration
 public class OpenApiConfig {
     
+    private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+    
     @Value("${server.port:8080}")
     private String serverPort;
     
+    @Value("${openapi.production-url:}")
+    private String productionUrl;
+    
     @Bean
     public OpenAPI qrCoffeeOpenAPI() {
-        final String securitySchemeName = "bearerAuth";
+        List<Server> servers = new ArrayList<>();
+        
+        // 로컬 개발 서버
+        servers.add(new Server()
+                .url("http://localhost:" + serverPort)
+                .description("로컬 개발 서버"));
+        
+        // 프로덕션 서버 (설정된 경우에만 추가)
+        if (productionUrl != null && !productionUrl.isEmpty()) {
+            servers.add(new Server()
+                    .url(productionUrl)
+                    .description("프로덕션 서버"));
+        }
         
         return new OpenAPI()
                 .info(new Info()
@@ -38,19 +57,13 @@ public class OpenApiConfig {
                         .license(new License()
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
-                .servers(List.of(
-                        new Server()
-                                .url("http://localhost:" + serverPort)
-                                .description("로컬 개발 서버"),
-                        new Server()
-                                .url("https://api.qrcoffee.com")
-                                .description("프로덕션 서버")))
+                .servers(servers)
                 .addSecurityItem(new SecurityRequirement()
-                        .addList(securitySchemeName))
+                        .addList(SECURITY_SCHEME_NAME))
                 .components(new Components()
-                        .addSecuritySchemes(securitySchemeName,
+                        .addSecuritySchemes(SECURITY_SCHEME_NAME,
                                 new SecurityScheme()
-                                        .name(securitySchemeName)
+                                        .name(SECURITY_SCHEME_NAME)
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")

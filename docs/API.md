@@ -2,11 +2,18 @@
 
 QR Coffee Order System의 REST API 엔드포인트 문서입니다.
 
+> ⚠️ **중요**: 이 문서는 참고용입니다. **실제 API 문서는 Swagger UI를 사용하세요.**
+> 
+> - **Swagger UI**: http://localhost:8080/swagger-ui.html (서버 실행 시 접근 가능)
+> - Swagger UI는 인터랙티브하며 항상 최신 API 명세를 보장합니다.
+> - 이 문서는 프로젝트 개요 및 주요 개념 설명을 위한 보조 자료입니다.
+
 ## 기본 정보
 
 - **Base URL**: `http://localhost:8080/api`
 - **인증 방식**: JWT Bearer Token
 - **응답 형식**: JSON
+- **API 문서**: Swagger UI 사용 권장 (http://localhost:8080/swagger-ui.html)
 
 ## 공통 응답 형식
 
