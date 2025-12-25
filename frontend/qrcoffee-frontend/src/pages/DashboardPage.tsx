@@ -1,4 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import {
   Container,
   Typography,
@@ -20,26 +34,12 @@ import {
   Badge,
   IconButton
 } from '@mui/material';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-} from 'chart.js';
-import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { dashboardService } from '../services/dashboardService';
+import { Notifications as NotificationsIcon } from '@mui/icons-material';
 import { DashboardStats } from '../types/dashboard';
 import { NotificationProvider, useNotification } from '../contexts/NotificationContext';
 import { NotificationUserType } from '../types/notification';
-import { Notifications as NotificationsIcon } from '@mui/icons-material';
+import { dashboardService } from '../services/dashboardService';
+import { useAuth } from '../contexts/AuthContext';
 
 // Chart.js 등록
 ChartJS.register(
