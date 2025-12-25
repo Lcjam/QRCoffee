@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.service;
 
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.dto.OrderRequest;
 import com.qrcoffee.backend.dto.OrderResponse;
 import com.qrcoffee.backend.dto.OrderItemRequest;
@@ -35,12 +36,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class OrderService {
-    
-    // 상수 정의
-    private static final String ORDER_NUMBER_DATE_FORMAT = "yyyyMMdd";
-    private static final String ORDER_NUMBER_FORMAT = "%s-%03d-%s";
-    private static final String UNKNOWN_SEAT = "알 수 없음";
-    private static final String DEFAULT_CUSTOMER_REQUEST = "";
     
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -240,7 +235,7 @@ public class OrderService {
         
         return orders.stream()
                 .map(order -> {
-                    String seatNumber = seatNumberMap.getOrDefault(order.getSeatId(), UNKNOWN_SEAT);
+                    String seatNumber = seatNumberMap.getOrDefault(order.getSeatId(), Constants.Order.UNKNOWN_SEAT);
                     return OrderResponse.fromWithSeat(order, seatNumber);
                 })
                 .collect(Collectors.toList());
@@ -261,7 +256,7 @@ public class OrderService {
         
         return orders.stream()
                 .map(order -> {
-                    String seatNumber = seatNumberMap.getOrDefault(order.getSeatId(), UNKNOWN_SEAT);
+                    String seatNumber = seatNumberMap.getOrDefault(order.getSeatId(), Constants.Order.UNKNOWN_SEAT);
                     return OrderResponse.fromWithSeat(order, seatNumber);
                 })
                 .collect(Collectors.toList());
@@ -278,7 +273,7 @@ public class OrderService {
                     Function.identity(),
                     seatId -> {
                         Seat seat = seatRepository.findById(seatId).orElse(null);
-                        return seat != null ? seat.getSeatNumber() : UNKNOWN_SEAT;
+                        return seat != null ? seat.getSeatNumber() : Constants.Order.UNKNOWN_SEAT;
                     }
                 ));
     }
@@ -436,10 +431,10 @@ public class OrderService {
      * 동시성 안전한 주문 번호 생성
      */
     private String generateOrderNumber(Long storeId) {
-        String today = LocalDateTime.now().format(DateTimeFormatter.ofPattern(ORDER_NUMBER_DATE_FORMAT));
+        String today = LocalDateTime.now().format(DateTimeFormatter.ofPattern(Constants.Order.ORDER_NUMBER_DATE_FORMAT));
         String uniqueId = generateUniqueId();
         
-        return String.format(ORDER_NUMBER_FORMAT, today, storeId, uniqueId);
+        return String.format(Constants.Order.ORDER_NUMBER_FORMAT, today, storeId, uniqueId);
     }
     
     /**
@@ -471,6 +466,6 @@ public class OrderService {
      */
     private Seat findSeatById(Long seatId) {
         return seatRepository.findById(seatId)
-                .orElse(null); // null 허용 (UNKNOWN_SEAT으로 처리)
+                .orElse(null); // null 허용 (Constants.Order.UNKNOWN_SEAT으로 처리)
     }
 } 

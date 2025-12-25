@@ -10,6 +10,7 @@ import {
   Stack
 } from '@mui/material';
 import { CreateSubAccountFormData, SubAccountRequest } from '../types/user';
+import { validateSignupForm } from '../utils/validation';
 
 interface SubAccountFormProps {
   onSubmit: (data: SubAccountRequest) => Promise<void>;
@@ -41,37 +42,18 @@ const SubAccountForm: React.FC<SubAccountFormProps> = ({
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email.trim()) {
-      setError('이메일은 필수입니다.');
+    const validation = validateSignupForm({
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      name: formData.name,
+    });
+    
+    if (!validation.isValid) {
+      setError(validation.error || '입력값 검증에 실패했습니다.');
       return false;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('올바른 이메일 형식을 입력해주세요.');
-      return false;
-    }
-
-    if (!formData.password.trim()) {
-      setError('비밀번호는 필수입니다.');
-      return false;
-    }
-
-    if (formData.password.length < 6) {
-      setError('비밀번호는 최소 6자 이상이어야 합니다.');
-      return false;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return false;
-    }
-
-    if (!formData.name.trim()) {
-      setError('이름은 필수입니다.');
-      return false;
-    }
-
+    
     return true;
   };
 

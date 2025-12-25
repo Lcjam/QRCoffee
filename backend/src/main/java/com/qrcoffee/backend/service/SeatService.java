@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.service;
 
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.dto.SeatRequest;
 import com.qrcoffee.backend.dto.SeatResponse;
 import com.qrcoffee.backend.dto.SeatStatsResponse;
@@ -23,15 +24,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Transactional(readOnly = true)
 public class SeatService {
-    
-    // 상수 정의
-    private static final int DEFAULT_MAX_CAPACITY = 4;
-    private static final int QR_CODE_GENERATION_MAX_ATTEMPTS = 100;
-    private static final String SEAT_CREATED_MESSAGE = "좌석 생성 완료";
-    private static final String SEAT_UPDATED_MESSAGE = "좌석 수정 완료";
-    private static final String SEAT_DELETED_MESSAGE = "좌석 삭제 완료";
-    private static final String SEAT_STATUS_CHANGED_MESSAGE = "좌석 상태 변경";
-    private static final String QR_CODE_REGENERATED_MESSAGE = "QR코드 재생성 완료";
     
     private final SeatRepository seatRepository;
     private final QRCodeUtil qrCodeUtil;
@@ -130,7 +122,7 @@ public class SeatService {
         updateSeatProperties(seat, request);
         
         Seat updatedSeat = seatRepository.save(seat);
-        log.info("{}: seatId={}", SEAT_UPDATED_MESSAGE, seatId);
+        log.info("{}: seatId={}", Constants.Seat.SEAT_UPDATED_MESSAGE, seatId);
         return SeatResponse.from(updatedSeat);
     }
     
@@ -183,7 +175,7 @@ public class SeatService {
         qrCodeUtil.logQRCodeGeneration(seat.getQrCode(), seat.getId(), seat.getSeatNumber());
         
         log.info("{}: seatId={}, oldQrCode={}, newQrCode={}", 
-                QR_CODE_REGENERATED_MESSAGE, seatId, oldQrCode, seat.getQrCode());
+                Constants.Seat.QR_CODE_REGENERATED_MESSAGE, seatId, oldQrCode, seat.getQrCode());
         return SeatResponse.from(updatedSeat);
     }
     
@@ -266,7 +258,7 @@ public class SeatService {
                 .qrCode(qrCode)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .isOccupied(false) // 새 좌석은 항상 비점유 상태로 생성
-                .maxCapacity(request.getMaxCapacity() != null ? request.getMaxCapacity() : DEFAULT_MAX_CAPACITY)
+                .maxCapacity(request.getMaxCapacity() != null ? request.getMaxCapacity() : Constants.Seat.DEFAULT_MAX_CAPACITY)
                 .qrCodeImageUrl(qrCodeImageUrl)
                 .qrGeneratedAt(LocalDateTime.now())
                 .build();
@@ -359,7 +351,7 @@ public class SeatService {
         do {
             qrCode = qrCodeUtil.generateQRCode();
             attempts++;
-            ValidationUtils.validateQRCodeGeneration(attempts, QR_CODE_GENERATION_MAX_ATTEMPTS);
+            ValidationUtils.validateQRCodeGeneration(attempts, Constants.Seat.QR_CODE_GENERATION_MAX_ATTEMPTS);
         } while (seatRepository.existsByQrCode(qrCode));
         
         return qrCode;

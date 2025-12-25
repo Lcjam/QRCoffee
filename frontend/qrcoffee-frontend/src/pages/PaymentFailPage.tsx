@@ -10,6 +10,7 @@ import {
   Stack
 } from '@mui/material';
 import { Error as ErrorIcon, Home as HomeIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { PAYMENT_ERROR_CODES } from '../utils/constants';
 
 const PaymentFailPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -28,16 +29,16 @@ const PaymentFailPage: React.FC = () => {
     switch (errorCode) {
       case 'PAY_PROCESS_CANCELED':
       case 'USER_CANCEL':
-        return '결제가 취소되었습니다.';
+        return PAYMENT_ERROR_CODES.PAY_PROCESS_CANCELED;
       case 'PAY_PROCESS_ABORTED':
-        return '결제가 중단되었습니다.';
+        return PAYMENT_ERROR_CODES.PAY_PROCESS_ABORTED;
       case 'REJECT_CARD_COMPANY':
       case 'INVALID_CARD':
-        return '유효하지 않은 카드 정보입니다.';
+        return PAYMENT_ERROR_CODES.INVALID_CARD;
       case 'INSUFFICIENT_FUNDS':
-        return '잔액이 부족합니다.';
+        return PAYMENT_ERROR_CODES.INSUFFICIENT_FUNDS;
       default:
-        return '결제에 실패했습니다. 다시 시도해주세요.';
+        return PAYMENT_ERROR_CODES.DEFAULT;
     }
   };
 

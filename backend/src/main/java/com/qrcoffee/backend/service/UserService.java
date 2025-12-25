@@ -1,5 +1,6 @@
 package com.qrcoffee.backend.service;
 
+import com.qrcoffee.backend.common.Constants;
 import com.qrcoffee.backend.dto.JwtResponse;
 import com.qrcoffee.backend.dto.LoginRequest;
 import com.qrcoffee.backend.dto.SignupRequest;
@@ -27,11 +28,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class UserService {
     
-    // 상수 정의
-    private static final String LOGIN_SUCCESS_MESSAGE = "로그인 성공";
-    private static final String SIGNUP_SUCCESS_MESSAGE = "회원가입 완료";
-    private static final String USER_STATUS_CHANGE_MESSAGE = "사용자 상태 변경";
-    
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
     private final PasswordEncoder passwordEncoder;
@@ -57,7 +53,7 @@ public class UserService {
         User user = createMasterUser(request, store);
         User savedUser = userRepository.save(user);
         
-        log.info("{}: {} (ID: {})", SIGNUP_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
+        log.info("{}: {} (ID: {})", Constants.User.SIGNUP_SUCCESS_MESSAGE, savedUser.getEmail(), savedUser.getId());
         
         return UserResponse.from(savedUser);
     }
@@ -66,14 +62,22 @@ public class UserService {
      * 마스터 사용자 생성
      */
     private User createMasterUser(SignupRequest request, Store store) {
+        return createUser(request, User.Role.MASTER, store.getId(), null, true);
+    }
+    
+    /**
+     * 사용자 생성 공통 메서드
+     */
+    private User createUser(SignupRequest request, User.Role role, Long storeId, Long parentUserId, Boolean isActive) {
         return User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .phone(request.getPhone())
-                .role(User.Role.MASTER)
-                .storeId(store.getId())
-                .isActive(true) // 명시적으로 활성화 상태 설정
+                .role(role)
+                .storeId(storeId)
+                .parentUserId(parentUserId)
+                .isActive(isActive != null ? isActive : true)
                 .build();
     }
     
@@ -93,7 +97,7 @@ public class UserService {
         // JWT 토큰 생성
         JwtResponse jwtResponse = generateJwtResponse(user);
         
-        log.info("{}: {} (ID: {})", LOGIN_SUCCESS_MESSAGE, user.getEmail(), user.getId());
+        log.info("{}: {} (ID: {})", Constants.User.LOGIN_SUCCESS_MESSAGE, user.getEmail(), user.getId());
         
         return jwtResponse;
     }
@@ -190,7 +194,7 @@ public class UserService {
         user.setIsActive(!user.getIsActive());
         User updatedUser = userRepository.save(user);
         
-        log.info("{}: {} -> {}", USER_STATUS_CHANGE_MESSAGE, user.getEmail(), user.getIsActive() ? "활성화" : "비활성화");
+        log.info("{}: {} -> {}", Constants.User.USER_STATUS_CHANGE_MESSAGE, user.getEmail(), user.getIsActive() ? "활성화" : "비활성화");
         
         return UserResponse.from(updatedUser);
     }
@@ -250,15 +254,7 @@ public class UserService {
         );
         
         // 서브계정 생성
-        User subUser = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName())
-                .phone(request.getPhone())
-                .role(User.Role.SUB)
-                .storeId(masterUser.getStoreId())
-                .parentUserId(masterUserId)
-                .build();
+        User subUser = createUser(request, User.Role.SUB, masterUser.getStoreId(), masterUserId, null);
         
         User savedUser = userRepository.save(subUser);
         
