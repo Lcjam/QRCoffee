@@ -58,6 +58,16 @@ public class SecurityConfig {
             
             // 요청 권한 설정
             .authorizeHttpRequests(auth -> auth
+                // Swagger/OpenAPI 문서 엔드포인트 (개발 환경에서만 공개)
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/v3/api-docs.yaml",
+                    "/swagger-resources/**",
+                    "/webjars/**"
+                ).permitAll()
+                
                 // 공개 엔드포인트
                 .requestMatchers(
                     "/api/auth/login",

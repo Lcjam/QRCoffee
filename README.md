@@ -126,8 +126,11 @@ npm start
 - **프론트엔드**: http://localhost:3000
 - **백엔드 API**: http://localhost:8080
 - **헬스체크**: http://localhost:8080/api/health
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **OpenAPI 문서**: http://localhost:8080/v3/api-docs
 
-> 💡 상세한 설정 가이드는 `SETUP_GUIDE.md`를 참고하세요.
+> 💡 상세한 설정 가이드는 `SETUP_GUIDE.md`를 참고하세요.  
+> 📚 API 문서는 Swagger UI에서 확인할 수 있습니다.
 
 ## 📁 프로젝트 구조
 
@@ -301,6 +304,7 @@ QRCoffee/
 
 ## 📚 문서
 
+- **Swagger UI**: http://localhost:8080/swagger-ui.html - 인터랙티브 API 문서 (실행 중인 서버 필요)
 - [API 문서](docs/API.md) - REST API 엔드포인트 상세 설명
 - [개발 가이드](docs/DEVELOPMENT.md) - 코딩 컨벤션 및 아키텍처 가이드
 - [기여 가이드](CONTRIBUTING.md) - 프로젝트 기여 방법
