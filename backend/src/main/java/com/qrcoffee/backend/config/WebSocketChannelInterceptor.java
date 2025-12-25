@@ -162,7 +162,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
         Long lastTime = lastConnectionTime.get(ipAddress);
         if (lastTime != null) {
             long timeSinceLastConnection = System.currentTimeMillis() - lastTime;
-            if (timeSinceLastConnection < CONNECTION_RATE_LIMIT_MS) {
+            if (timeSinceLastConnection < Constants.WebSocket.CONNECTION_RATE_LIMIT_MS) {
                 return false;
             }
         }

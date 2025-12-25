@@ -121,7 +121,7 @@ public class OrderService {
                 .status(Order.OrderStatus.PENDING)
                 .paymentStatus(Order.PaymentStatus.PENDING)
                 .customerRequest(request.getCustomerRequest() != null ? 
-                    request.getCustomerRequest() : DEFAULT_CUSTOMER_REQUEST)
+                    request.getCustomerRequest() : Constants.Order.DEFAULT_CUSTOMER_REQUEST)
                 .build();
     }
     

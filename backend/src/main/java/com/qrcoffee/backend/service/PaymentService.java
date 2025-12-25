@@ -242,7 +242,7 @@ public class PaymentService {
      */
     private PaymentResponse attemptTossApiCall(PaymentConfirmRequest request, int attempt) {
         log.debug("토스페이먼츠 API 호출 시도 {}/{}: paymentKey={}, orderId={}, amount={}", 
-            attempt, MAX_RETRY_COUNT, request.getPaymentKey(), request.getOrderId(), request.getAmount());
+            attempt, Constants.Payment.MAX_RETRY_COUNT, request.getPaymentKey(), request.getOrderId(), request.getAmount());
         
         HttpEntity<Map<String, Object>> entity = createTossApiRequest(request);
         ResponseEntity<String> response = restTemplate.exchange(Constants.Payment.TOSS_API_URL, HttpMethod.POST, entity, String.class);
@@ -289,7 +289,7 @@ public class PaymentService {
      * PROVIDER_ERROR 여부 확인
      */
     private boolean isProviderError(HttpClientErrorException e) {
-        return e.getResponseBodyAsString().contains(PROVIDER_ERROR);
+        return e.getResponseBodyAsString().contains(Constants.Payment.PROVIDER_ERROR);
     }
     
     /**
@@ -532,7 +532,7 @@ public class PaymentService {
         
         // 알 수 없는 경우 간편결제로 기본 처리 (대부분이 간편결제이므로)
         log.info("알 수 없는 결제 수단이지만 간편결제로 처리: {}", cleanMethod);
-        return DEFAULT_PAYMENT_METHOD;
+        return Constants.Payment.DEFAULT_PAYMENT_METHOD;
     }
     
     /**
