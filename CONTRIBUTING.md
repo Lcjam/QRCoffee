@@ -12,7 +12,7 @@ QR Coffee Order System에 기여해주셔서 감사합니다!
 
 ## 개발 환경 설정
 
-자세한 내용은 [README.md](README.md)와 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)를 참고하세요.
+자세한 내용은 [README.md](README.md)와 [docs/개발_가이드.md](docs/개발_가이드.md)를 참고하세요.
 
 ## 코딩 스타일
 
@@ -28,7 +28,7 @@ QR Coffee Order System에 기여해주셔서 감사합니다!
 - Import 순서 준수
 - 컴포넌트명은 PascalCase
 
-자세한 내용은 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)를 참고하세요.
+자세한 내용은 [docs/개발_가이드.md](docs/개발_가이드.md)를 참고하세요.
 
 ## 커밋 메시지 규칙
 
