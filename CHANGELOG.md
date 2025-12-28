@@ -13,8 +13,8 @@
 - 프론트엔드 공통 검증 유틸리티 (`utils/validation.ts`)
 - 프론트엔드 공통 상수 정의 (`utils/constants.ts`)
 - Prettier 설정 파일
-- API 문서 (`docs/API.md`)
-- 개발 가이드 (`docs/DEVELOPMENT.md`)
+- API 문서 (`docs/API_문서.md`)
+- 개발 가이드 (`docs/개발_가이드.md`)
 - 기여 가이드 (`CONTRIBUTING.md`)
 
 ### Changed

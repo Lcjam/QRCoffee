@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -208,9 +210,13 @@ class NotificationServiceTest {
                 .isRead(true)
                 .build();
         
+        org.springframework.data.domain.Page<Notification> mockPage = 
+                org.mockito.Mockito.mock(org.springframework.data.domain.Page.class);
+        when(mockPage.getContent()).thenReturn(Arrays.asList(notification1, notification2));
+        
         when(notificationRepository.findByStoreIdAndUserTypeOrderBySentAtDesc(
-                testStoreId, Notification.UserType.ADMIN))
-                .thenReturn(Arrays.asList(notification1, notification2));
+                eq(testStoreId), eq(Notification.UserType.ADMIN), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(mockPage);
         
         // when
         List<Notification> notifications = notificationService.getNotifications(
@@ -222,7 +228,8 @@ class NotificationServiceTest {
         assertThat(notifications.get(1).getId()).isEqualTo(2L);
         
         verify(notificationRepository, times(1))
-                .findByStoreIdAndUserTypeOrderBySentAtDesc(testStoreId, Notification.UserType.ADMIN);
+                .findByStoreIdAndUserTypeOrderBySentAtDesc(
+                        eq(testStoreId), eq(Notification.UserType.ADMIN), any(org.springframework.data.domain.Pageable.class));
     }
     
     @Test
@@ -243,7 +250,7 @@ class NotificationServiceTest {
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
         
         // when
-        Notification updatedNotification = notificationService.markAsRead(1L);
+        Notification updatedNotification = notificationService.markAsRead(1L, testStoreId);
         
         // then
         assertThat(updatedNotification.getIsRead()).isTrue();
